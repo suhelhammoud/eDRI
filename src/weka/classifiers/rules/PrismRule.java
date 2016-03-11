@@ -43,6 +43,9 @@ public class PrismRule
      */
     int m_errors;
 
+    int m_covers;
+    int m_correct;
+
     /** The next rule in the list */
 //    PrismRule m_next;
 
@@ -60,16 +63,21 @@ public class PrismRule
         m_classification = cl;
         m_test = null;
 //        m_next = null;
-        m_errors = 0;
 
+        m_instances = new Instances(data, 0);
+//        calcNotCovered(data);
+    }
+
+    public int updateAndGetNotCovered(Instances data) {
+        m_errors = 0;
         //count not covered number
         Enumeration enu = data.enumerateInstances();
         while (enu.hasMoreElements()) {
-            if ((int) ((Instance) enu.nextElement()).classValue() != cl) {
+            if ((int) ((Instance) enu.nextElement()).classValue() != m_classification) {
                 m_errors++;
             }
         }
-        m_instances = new Instances(data, 0);
+        return m_errors;
     }
 
     /**
@@ -221,5 +229,16 @@ public class PrismRule
      */
     public String getRevision() {
         return RevisionUtils.extract("$Revision: 5529 $");
+    }
+
+    public boolean isPerfect(int minSupport, double minConf) {
+        if (m_errors == 0) return true;
+        if (getConfidence() >= minConf && m_correct >= minSupport) return true;
+//        if(m_correct >= minSupport) return  true;
+        return false;
+    }
+
+    private double getConfidence() {
+        return (double)m_correct/(double)m_covers;
     }
 }

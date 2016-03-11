@@ -24,6 +24,15 @@ public class PrismOptions implements OptionHandler, Serializable{
 
     }
 
+    protected boolean useOldPrism = false;
+    public boolean getUseOldPrism() {
+        return useOldPrism;
+    }
+
+    public void setUseOldPrism(boolean useOldPrism) {
+        this.useOldPrism = useOldPrism;
+    }
+
     enum LEVELS {off, trace, debug, info, warn, error, fatal;
         public static Tag[] toTags(){
             LEVELS[] levels = values();
@@ -37,7 +46,8 @@ public class PrismOptions implements OptionHandler, Serializable{
 
 
     protected String m_debugLevel= "DEBUG";
-    protected int minSupport = 0;
+    protected int minSupport = 1;
+    protected double minConfidence = 0.8;
 
     public int getMinSupport() {
         return minSupport;
@@ -47,7 +57,6 @@ public class PrismOptions implements OptionHandler, Serializable{
         this.minSupport = minSupport;
     }
 
-    protected double minConfidence = 0.4;
 
     public double getMinConfidence() {
         return minConfidence;
@@ -65,6 +74,7 @@ public class PrismOptions implements OptionHandler, Serializable{
     @Override
     public Enumeration listOptions() {
         Vector<Option> result = new Vector<>(1);
+        result.addElement(new Option("Old Prism algorithm", "P", 0, "-P"));
         result.addElement(new Option("minimum support", "S", 1, "-S <lower bound for minimum support >"));
         result.addElement(new Option("minimum confidence", "C", 1, "-C <minimum confidence of a rule >"));
         result.addElement(new Option("descritption", "D", 1, "-D < off | trace | debug | info | warn | error | fatal >"));
@@ -82,11 +92,13 @@ public class PrismOptions implements OptionHandler, Serializable{
         String sSupport = Utils.getOption('S', options);
         minSupport = Integer.parseInt(sSupport);
 
+        useOldPrism = Utils.getFlag('P', options);
+
     }
 
     @Override
     public String[] getOptions() {
-        String[] result = new String[6];
+        String[] result = new String[7];
         int currentIndex = 0;
         result[currentIndex++] = "-D";
         result[currentIndex++] = m_debugLevel;
@@ -97,6 +109,10 @@ public class PrismOptions implements OptionHandler, Serializable{
         result[currentIndex++] = "-C";
         result[currentIndex++] = ""+ minConfidence;
 
+        if(useOldPrism)
+            result[currentIndex++] = "-P";
+        else
+            result[currentIndex++] = "";
 
         return result;
     }

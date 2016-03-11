@@ -170,6 +170,13 @@ public class PrismMod01
 //        return pOptions.getOptions();
     }
 
+    public boolean getUseOldPrism() {
+        return pOptions.getUseOldPrism();
+    }
+
+    public void setUseOldPrism(boolean b) {
+        pOptions.setUseOldPrism(b);
+    }
     public int getMinSupport() {
         return pOptions.getMinSupport();
     }
@@ -219,14 +226,67 @@ public class PrismMod01
         return result;
     }
 
-    /**
-     * Generates the classifier.
-     *
-     * @param data the data to be used
-     * @exception Exception if the classifier can't built successfully
-     */
+    public void buildClassifierFadi(Instances data, int minSupport, double minConfidence) throws Exception {
+
+        List<PrismRule> rules = new ArrayList<>(data.numAttributes());
+        int cl; // possible value of theClass
+        Instances E = null, ruleE;
+        PrismRule rule = null;
+
+        Test test = null;
+        Test oldTest = null;
+        int bestCorrect, bestCovers, attUsed;
+        Enumeration enumAtt;
+
+        // can classifier handle the data?
+        getCapabilities().testWithFail(data);
+
+        // remove instances with missing class
+        data = new Instances(data);
+        data.deleteWithMissingClass();
+        for (cl = 0; cl < data.numClasses(); cl++) { // for each class cl
+            Attribute classAtt = data.attribute(data.classIndex());
+
+            logger.debug("for class = {}", classAtt.value(cl));
+            logger.debug("reset E from {} to {} instances",
+                    E == null ? "null": E.numInstances(),
+                    data.numInstances());
+            E = data; // initialize E to the instance set
+
+            while (contains(E, cl)) { // while E contains examples in class cl
+                Pair<PrismRule, Instances> result = ruleInstancesFadi(cl, E, minSupport, minConfidence);
+                rules.add(result.key);
+                E = result.value;
+            }
+
+            logger.debug("\t switching to next class with E contains {} instances\n", E.numInstances());
+
+        }
+        logger.debug("no more classes found");
+        m_rules.clear();
+        m_rules.addAll(rules);
+    }
+
+
+        /**
+         * Generates the classifier.
+         *
+         * @param data the data to be used
+         * @exception Exception if the classifier can't built successfully
+         */
     public void buildClassifier(Instances data) throws Exception {
+
         lgLevel.setLevel(Level.toLevel(pOptions.m_debugLevel));
+
+        if (pOptions.getUseOldPrism()) {
+            buildClassifierPrism(data);
+        } else {
+            buildClassifierFadi(data, pOptions.minSupport, pOptions.minConfidence);
+        }
+
+    }
+
+    public void buildClassifierPrism(Instances data) throws Exception {
         List<PrismRule> rules = new ArrayList<>(data.numAttributes());
 
         int cl; // possible value of theClass
@@ -267,6 +327,7 @@ public class PrismMod01
         m_rules.addAll(rules);
     }
 
+
     class Pair<K, V>{
         final public  K key;
         final public V value;
@@ -275,6 +336,116 @@ public class PrismMod01
             this.key = key;
             this.value = value;
         }
+    }
+
+
+    private Pair<PrismRule, Instances> ruleInstancesFadi(int cl, Instances e, int minSupport, double minConfidence) throws Exception {
+//        Instances data = ;
+//        List<PrismRule> rules = ;
+        Attribute classAtt = e.attribute(e.classIndex());
+        PrismRule rule;
+        Instances ruleE;
+        Test test;
+        int attUsed;
+        int bestCovers;
+        int bestCorrect;
+        Enumeration enumAtt;
+        logger.debug("\tE contains {} class\n", classAtt.value(cl));
+        rule = new PrismRule(e, cl);
+        rule.updateAndGetNotCovered(e);
+
+        logger.debug("\tNew rule {}", rule.toStr());
+        ruleE = e; // examples covered by this rule
+        logger.info("\tstart ruleE  with {} instances", ruleE.numInstances());
+//        while (rule.m_errors != 0) { // until the rule is perfect
+        while (! rule.isPerfect( minSupport,  minConfidence)) { // until the rule is perfect
+            logger.debug("\t\tRule {} is not perfect", rule.id);
+            test = new Test(); // make a new test
+            bestCorrect = bestCovers = attUsed = 0;
+
+            // for every attribute not mentioned in the rule
+            enumAtt = ruleE.enumerateAttributes();
+            while (enumAtt.hasMoreElements()) {
+                Attribute attr = (Attribute) enumAtt.nextElement();
+                logger.debug("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
+                if (isMentionedIn(attr, rule.m_test)) {
+                    attUsed++;
+                    logger.debug("\t\t\tSkip attr {}", attr, attr.name());
+                    continue;
+                }
+                int M = attr.numValues();
+                int[] covers = new int [M];
+                int[] correct = new int [M];
+                String[] attrNames = new String[M];
+
+                for (int j = 0; j < M; j++) {
+                    covers[j] = correct[j] = 0;
+                    attrNames[j] = attr.value(j);
+                }
+
+                // ... calculate the counts for this class
+                Enumeration enu = ruleE.enumerateInstances();
+                while (enu.hasMoreElements()) {
+                    Instance instance = (Instance) enu.nextElement();
+                    covers[(int) instance.value(attr)]++;
+                    if ((int) instance.classValue() == cl) {
+                        correct[(int) instance.value(attr)]++;
+                    }
+                }
+
+
+                logger.debug("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
+
+                int notCovered= -1;
+                // ... for each value of this attribute, see if this test is better
+                for (int val = 0; val < M; val ++) {
+                    double conf = (double) correct[val] / (double) covers[val];
+                    if (conf < minConfidence) {
+                        continue;
+                    } else if (correct[val] < minSupport) {
+                            continue;
+                    }
+
+                    int diff = correct[val] * bestCovers - bestCorrect * covers[val];
+
+                    // this is a ratio test, correct/covers vs best correct/covers
+                    if (test.m_attr == -1
+                            || diff > 0 || (diff == 0 && correct[val] > bestCorrect)) {
+
+                        // update the rule to use this test
+                        bestCorrect = correct[val];
+                        bestCovers = covers[val];
+                        test.m_attr = attr.index();
+                        test.m_val = val;
+//                        notCovered = bestCovers - bestCorrect;
+                        rule.m_errors = bestCovers - bestCorrect;
+                        rule.m_covers = bestCovers;
+                        rule.m_correct = bestCorrect;
+                    }
+                }
+
+            }
+            if (test.m_attr == -1) { // Couldn't find any sensible test
+                logger.debug("\t\t\tCouldn't find any sensible test");
+                break;
+            }
+            logger.debug("\t\t\tAdd test {} to rule {}",
+                    test == null? "null": test.toStr(e),
+                    rule == null ? "null": rule.toStr());
+
+//                    oldTest = addTest(rule, oldTest, test);
+            rule.addTest(test);
+
+            ruleE = rule.coveredBy(ruleE);
+            logger.debug("\t\t\tR_{} coveredBy {}", rule.id, ruleE.numInstances());
+            if (attUsed == (e.numAttributes() - 1)) { // Used all attributes.
+                logger.debug("\t\t\tused all the attributes, break loop");
+                break;
+            }
+        }
+        Instances result = rule.notCoveredBy(e);
+        logger.debug("\tE now contains {} instances\n", result.numInstances());
+        return new Pair<>(rule, result);
     }
 
     private Pair<PrismRule, Instances> ruleInstances(int cl, Instances e) throws Exception {
@@ -290,6 +461,7 @@ public class PrismMod01
         Enumeration enumAtt;
         logger.debug("\tE contains {} class\n", classAtt.value(cl));
         rule = new PrismRule(e, cl);
+        rule.updateAndGetNotCovered(e);
 //        rules.add(rule);
         logger.debug("\tNew rule {}", rule.toStr());
         ruleE = e; // examples covered by this rule
