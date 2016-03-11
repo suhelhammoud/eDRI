@@ -18,19 +18,29 @@ public class PrismRule
 
     static AtomicInteger ID = new AtomicInteger();
     final public int id;
-    /** for serialization */
+    /**
+     * for serialization
+     */
     static final long serialVersionUID = 4248784350656508583L;
 
-    /** The classification */
+    /**
+     * The classification
+     */
     final int m_classification;
 
-    /** The instance */
+    /**
+     * The instance
+     */
     final Instances m_instances;
 
-    /** First test of this rule */
+    /**
+     * First test of this rule
+     */
     Test m_test;
 
-    /** Number of errors made by this rule (will end up 0) */
+    /**
+     * Number of errors made by this rule (will end up 0)
+     */
     int m_errors;
 
     /** The next rule in the list */
@@ -40,8 +50,8 @@ public class PrismRule
      * Constructor that takes instances and the classification.
      *
      * @param data the instances
-     * @param cl the class
-     * @exception Exception if something goes wrong
+     * @param cl   the class
+     * @throws Exception if something goes wrong
      */
     public PrismRule(Instances data, int cl) throws Exception {
         this.id = ID.incrementAndGet();
@@ -77,6 +87,18 @@ public class PrismRule
         }
     }
 
+    public void addTest(Test newTest) {
+        if(m_test == null){
+            m_test = newTest;
+            return;
+        }
+
+        Test tempTest = m_test;
+        while (tempTest.m_next != null)
+            tempTest = tempTest.m_next;
+        tempTest.m_next = newTest;
+    }
+
 //    /**
 //     * Returns the result assigned by these rules to a given instance.
 //     *
@@ -102,6 +124,7 @@ public class PrismRule
         }
         return -1;
     }
+
     /**
      * Returns the set of instances that are covered by this rule.
      *
@@ -143,17 +166,20 @@ public class PrismRule
     }
 
     public String toStr() {
-        StringBuilder sb = new StringBuilder("R_"+id+"[");
+        StringBuilder sb = new StringBuilder("R_" + id + "[");
         int classIndex = m_instances.classIndex();
         String label = m_instances.attribute(classIndex).value(m_classification);
-        sb.append("cls="+ label+ ", inst = "+ m_instances.numInstances()+",");
-        sb.append("err = "+ m_errors);
-        if(m_test != null )
+        sb.append("cls=" + label + ", inst = " + m_instances.numInstances() + ",");
+        sb.append("err = " + m_errors);
+        if (m_test != null)
             sb.append("<" + m_test.toStr(m_instances) + ">");
         sb.append("]");
 
         return sb.toString();
-    };
+    }
+
+    ;
+
     /**
      * Prints the set of rules.
      *
@@ -191,7 +217,7 @@ public class PrismRule
     /**
      * Returns the revision string.
      *
-     * @return		the revision
+     * @return the revision
      */
     public String getRevision() {
         return RevisionUtils.extract("$Revision: 5529 $");

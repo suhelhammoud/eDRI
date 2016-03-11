@@ -182,10 +182,11 @@ public class PrismMod01
         List<PrismRule> rules = new ArrayList<>(data.numAttributes());
 
         int cl; // possible value of theClass
-        Instances E, ruleE;
+        Instances E = null, ruleE;
         PrismRule rule = null;
 
-        Test test = null, oldTest = null;
+        Test test = null;
+        Test oldTest = null;
         int bestCorrect, bestCovers, attUsed;
         Enumeration enumAtt;
 
@@ -195,19 +196,23 @@ public class PrismMod01
         // remove instances with missing class
         data = new Instances(data);
         data.deleteWithMissingClass();
-
         for (cl = 0; cl < data.numClasses(); cl++) { // for each class cl
             Attribute classAtt = data.attribute(data.classIndex());
 
-            logger.debug("for class: {} ", classAtt.value(cl));
+            logger.debug("for class = {}", classAtt.value(cl));
+
+            logger.debug("reset E from {} to {} instances",
+                    E == null ? "null": E.numInstances(),
+                    data.numInstances());
             E = data; // initialize E to the instance set
+
             while (contains(E, cl)) { // while E contains examples in class cl
-                logger.debug("E contains {}", classAtt.value(cl));
+                logger.debug("\tE contains {} class\n", classAtt.value(cl));
                 rule = new PrismRule(E, cl);
                 rules.add(rule);
-                logger.debug("make new rule {}", rule.toStr());
+                logger.debug("\tNew rule {}, All rules number = {}", rule.toStr(), rules.size());
                 ruleE = E; // examples covered by this rule
-                logger.info("ruleE {}", ruleE.numInstances());
+                logger.info("\truleE {}", ruleE.numInstances());
                 while (rule.m_errors != 0) { // until the rule is perfect
                     test = new Test(); // make a new test
                     bestCorrect = bestCovers = attUsed = 0;
@@ -216,18 +221,20 @@ public class PrismMod01
                     enumAtt = ruleE.enumerateAttributes();
                     while (enumAtt.hasMoreElements()) {
                         Attribute attr = (Attribute) enumAtt.nextElement();
-                        logger.debug("for attr {} of class {}", attr.name(), classAtt.value(cl));
+                        logger.debug("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
                         if (isMentionedIn(attr, rule.m_test)) {
                             attUsed++;
-                            logger.debug("\tattr {} is mentioned in {}", attr, rule.m_test.toStr(data));
-
+                            logger.debug("\t\t\tSkip attr {}", attr, attr.name());
                             continue;
                         }
                         int M = attr.numValues();
                         int[] covers = new int [M];
                         int[] correct = new int [M];
+                        String[] attrNames = new String[M];
+
                         for (int j = 0; j < M; j++) {
                             covers[j] = correct[j] = 0;
+                            attrNames[j] = attr.value(j);
                         }
 
                         // ... calculate the counts for this class
@@ -239,7 +246,9 @@ public class PrismMod01
                                 correct[(int) instance.value(attr)]++;
                             }
                         }
-                        logger.debug("attr_{} Covers={} correct {}", attr.name(),Arrays.toString(covers), Arrays.toString(correct));
+
+
+                        logger.debug("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames,Arrays.toString(covers), Arrays.toString(correct));
 
                         // ... for each value of this attribute, see if this test is better
                         for (int val = 0; val < M; val ++) {
@@ -260,26 +269,31 @@ public class PrismMod01
 
                     }
                     if (test.m_attr == -1) { // Couldn't find any sensible test
-                        logger.debug("Couldn't find any sensible test");
+                        logger.debug("\t\t\tCouldn't find any sensible test");
                         break;
                     }
-                    logger.debug("add test {} to oldTest {} in rule {}",
+                    logger.debug("\t\t\tAdd test {} to rule {}",
                             test == null? "null": test.toStr(data),
-                            oldTest == null ?"null":oldTest.toStr(data),
                             rule == null ? "null": rule.toStr());
 
-                    oldTest = addTest(rule, oldTest, test);
+//                    oldTest = addTest(rule, oldTest, test);
+                    rule.addTest(test);
 
                     ruleE = rule.coveredBy(ruleE);
-                    logger.debug("R_{} coveredBy {}", rule.id, ruleE.numInstances());
+                    logger.debug("\t\t\tR_{} coveredBy {}", rule.id, ruleE.numInstances());
                     if (attUsed == (data.numAttributes() - 1)) { // Used all attributes.
+                        logger.debug("\t\t\tused all the attributes, break loop");
                         break;
                     }
                 }
                 E = rule.notCoveredBy(E);
+                logger.debug("\tE now contains {} instances\n",E.numInstances());
             }
-        }
 
+            logger.debug("\t switching to next class with E contains {} instances\n", E.numInstances());
+
+        }
+        logger.debug("no more classes found");
         m_rules.clear();
         m_rules.addAll(rules);
     }
@@ -371,7 +385,6 @@ public class PrismMod01
     public static void main(String[] args) throws Exception{
         String inFile = "/media/suhel/workspace/work/wekaprism/data/fadi.arff";
 //        String command = "-t "+ inFile + " -T "+ inFile + " -no-cv";
-        logger.info("Suhel : "+1);
 //        runClassifier(new Prism(), args);
 
         Instances data = new Instances(readDataFile(inFile));
