@@ -1,5 +1,9 @@
 package weka.classifiers.rules;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import weka.core.*;
 
 import java.io.Serializable;
@@ -12,6 +16,8 @@ import java.util.Vector;
  */
 public class PrismOptions implements OptionHandler, Serializable{
 
+    static final long serialVersionUID = 1310258880025902107L;
+//    static Logger logger = LoggerFactory.getLogger(PrismOptions.class);
 
     public SelectedTag getDebugLevel() {
         return new SelectedTag(m_debugLevel, LEVELS.toTags());
@@ -52,13 +58,7 @@ public class PrismOptions implements OptionHandler, Serializable{
     }
 
 
-    public String getM_debugLevel() {
-        return m_debugLevel;
-    }
 
-    public void setM_debugLevel(String m_debugLevel) {
-        this.m_debugLevel = m_debugLevel;
-    }
 
 
 
@@ -102,9 +102,18 @@ public class PrismOptions implements OptionHandler, Serializable{
     }
 
     public void setDebugLevel(SelectedTag newMethod) {
-        setM_debugLevel(newMethod.getSelectedTag().getIDStr());
+         m_debugLevel = newMethod.getSelectedTag().getIDStr();
     }
 
+    public  void changeLogLevelRunTime() {
+        changeLogLevelRunTime(m_debugLevel);
+    }
+
+    public static void changeLogLevelRunTime(String logLevel) {
+//        Logger lg = (Logger) LoggerFactory.getLogger(PrismMod01.class);
+        ((ch.qos.logback.classic.Logger)LoggerFactory.getLogger(PrismMod01.class)) .setLevel(Level.toLevel(logLevel));
+
+    }
         public static void main(String[] args) throws Exception {
 
         PrismOptions opt = new PrismOptions();

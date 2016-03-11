@@ -1,17 +1,27 @@
 
 <configuration>
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <timestamp key="bySecond" datePattern="HH-mm-ss"/>
+
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender" >
+        <file>PrismMod-log-${bySecond}.txt</file>
+        <append>true</append>
+
         <!-- encoders are assigned the type
              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <!--<withJansi>true</withJansi>-->
 
         <encoder>
-            <pattern>%d{mm:ss.SSS} %highlight(%-5level) %logger{0}.%M %L - %msg%n</pattern>
+            <pattern>%d{mm:ss.SSS} %-5level %logger{0}.%M %L - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <root level="debug">
-        <appender-ref ref="STDOUT" />
+    <!--<logger name="weka.classifiers.rules.PrismMod01" level="debug" >-->
+        <!--<appender-ref ref="STDOUT"/>-->
+    <!--</logger>-->
+
+    <root level="debug"  >
+        <appender-ref ref="FILE"  />
     </root>
 </configuration>

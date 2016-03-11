@@ -22,6 +22,9 @@
 
 package weka.classifiers.rules;
 
+import ch.qos.logback.classic.Level;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import weka.classifiers.Classifier;
 import weka.core.*;
 import weka.core.Capabilities.Capability;
@@ -33,8 +36,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  <!-- globalinfo-start -->
@@ -79,7 +80,8 @@ public class PrismMod01
         implements OptionHandler, TechnicalInformationHandler {
 
 
-    PrismOptions prismOptions = new PrismOptions();
+    PrismOptions pOptions = new PrismOptions();
+    static ch.qos.logback.classic.Logger lgLevel = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(PrismMod01.class);
     static Logger logger = LoggerFactory.getLogger(PrismMod01.class);
 
 
@@ -149,49 +151,49 @@ public class PrismMod01
 
     @Override
     public Enumeration listOptions() {
-        return  prismOptions.listOptions();
-//        return prismOptions.listOptions();
+        return  pOptions.listOptions();
+//        return pOptions.listOptions();
     }
 
     @Override
     public void setOptions(String[] options) throws Exception {
-        prismOptions.setOptions(options);
+        pOptions.setOptions(options);
 //        m_debugLevel = Utils.getOption("D", options);
 
-//        prismOptions.setOptions(options);
+//        pOptions.setOptions(options);
     }
 
     @Override
     public String[] getOptions() {
-        return prismOptions.getOptions();
+        return pOptions.getOptions();
 
-//        return prismOptions.getOptions();
+//        return pOptions.getOptions();
     }
 
     public int getMinSupport() {
-        return prismOptions.getMinSupport();
+        return pOptions.getMinSupport();
     }
 
     public void setMinSupport(int support) {
-        prismOptions.setMinSupport(support);
+        pOptions.setMinSupport(support);
     }
 
     public double getMinConfidence() {
-        return prismOptions.getMinConfidence();
+        return pOptions.getMinConfidence();
     }
 
     public void setMinConfidence(double confidence) {
-        prismOptions.setMinConfidence(confidence);
+        pOptions.setMinConfidence(confidence);
     }
 
     public void setDebugLevel(SelectedTag newMethod) {
-        prismOptions.setDebugLevel(newMethod);
-//        prismOptions.setM_debugLevel(newMethod.getSelectedTag().getIDStr());
+        pOptions.setDebugLevel(newMethod);
+//        pOptions.setM_debugLevel(newMethod.getSelectedTag().getIDStr());
 //        m_debugLevel = newMethod.getSelectedTag().getIDStr();
     }
 
     public SelectedTag getDebugLevel() {
-        return prismOptions.getDebugLevel();
+        return pOptions.getDebugLevel();
     }
 
     public String debugLevelTipText() {
@@ -224,7 +226,7 @@ public class PrismMod01
      * @exception Exception if the classifier can't built successfully
      */
     public void buildClassifier(Instances data) throws Exception {
-
+        lgLevel.setLevel(Level.toLevel(pOptions.m_debugLevel));
         List<PrismRule> rules = new ArrayList<>(data.numAttributes());
 
         int cl; // possible value of theClass
@@ -246,14 +248,13 @@ public class PrismMod01
             Attribute classAtt = data.attribute(data.classIndex());
 
             logger.debug("for class = {}", classAtt.value(cl));
-
             logger.debug("reset E from {} to {} instances",
                     E == null ? "null": E.numInstances(),
                     data.numInstances());
             E = data; // initialize E to the instance set
 
             while (contains(E, cl)) { // while E contains examples in class cl
-                Pair<PrismRule, Instances> result = getOneRuleAndNotCoveredInstances(cl, E);
+                Pair<PrismRule, Instances> result = ruleInstances(cl, E);
                 rules.add(result.key);
                 E = result.value;
             }
@@ -276,7 +277,7 @@ public class PrismMod01
         }
     }
 
-    private Pair<PrismRule, Instances> getOneRuleAndNotCoveredInstances(int cl, Instances e) throws Exception {
+    private Pair<PrismRule, Instances> ruleInstances(int cl, Instances e) throws Exception {
 //        Instances data = ;
 //        List<PrismRule> rules = ;
         Attribute classAtt = e.attribute(e.classIndex());
