@@ -1,6 +1,7 @@
 package weka.classifiers.rules;
 
 import weka.core.Instance;
+import weka.core.Instances;
 import weka.core.RevisionHandler;
 import weka.core.RevisionUtils;
 
@@ -65,7 +66,21 @@ public class Test
      */
     public String toStr() {
         StringBuilder sb = new StringBuilder("T_"+id);
-        sb.append("(att"+m_attr+ " = "+m_val+")");
+        sb.append("(att_"+m_attr+ " = "+m_val+")");
+        Test ntest = m_next;
+        while (ntest != null) {
+            sb.append(" -> " + ntest.toStr());
+            ntest = ntest.m_next;
+        }
+
+        return  sb.toString();
+    };
+
+    public String toStr(Instances data) {
+        StringBuilder sb = new StringBuilder("T_"+id);
+        String at_name = data.attribute(m_attr).name();
+        String at_val = data.attribute(m_attr).value(m_val);
+        sb.append("(att_"+at_name+ " = "+at_val+")");
         Test ntest = m_next;
         while (ntest != null) {
             sb.append(" -> " + ntest.toStr());

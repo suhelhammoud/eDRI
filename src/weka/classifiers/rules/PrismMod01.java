@@ -22,6 +22,7 @@
 
 package weka.classifiers.rules;
 
+import org.w3c.dom.Attr;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.Capabilities;
@@ -37,8 +38,10 @@ import weka.core.TechnicalInformation.Type;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,7 +134,7 @@ public class PrismMod01
 
 
     /** The first rule in the list of rules */
-    private PrismRule m_rules;
+    private List<PrismRule> m_rules = new ArrayList<>();
 
     /**
      * Classifies a given instance.
@@ -141,7 +144,7 @@ public class PrismMod01
      */
     public double classifyInstance(Instance inst) {
 
-        int result = m_rules.resultRules(inst);
+        int result = PrismRule.classifyInst(inst, m_rules);
         if (result == -1) {
             return Instance.missingValue();
         } else {
@@ -175,9 +178,13 @@ public class PrismMod01
      * @exception Exception if the classifier can't built successfully
      */
     public void buildClassifier(Instances data) throws Exception {
+
+        List<PrismRule> rules = new ArrayList<>(data.numAttributes());
+
         int cl; // possible value of theClass
         Instances E, ruleE;
         PrismRule rule = null;
+
         Test test = null, oldTest = null;
         int bestCorrect, bestCovers, attUsed;
         Enumeration enumAtt;
@@ -190,11 +197,14 @@ public class PrismMod01
         data.deleteWithMissingClass();
 
         for (cl = 0; cl < data.numClasses(); cl++) { // for each class cl
-            logger.debug("for class: {} ", cl);
+            Attribute classAtt = data.attribute(data.classIndex());
+
+            logger.debug("for class: {} ", classAtt.value(cl));
             E = data; // initialize E to the instance set
             while (contains(E, cl)) { // while E contains examples in class cl
-                logger.debug("E contains {}", cl);
-                rule = addRule(rule, new PrismRule(E, cl)); // make a new rule
+                logger.debug("E contains {}", classAtt.value(cl));
+                rule = new PrismRule(E, cl);
+                rules.add(rule);
                 logger.debug("make new rule {}", rule.toStr());
                 ruleE = E; // examples covered by this rule
                 logger.info("ruleE {}", ruleE.numInstances());
@@ -206,10 +216,10 @@ public class PrismMod01
                     enumAtt = ruleE.enumerateAttributes();
                     while (enumAtt.hasMoreElements()) {
                         Attribute attr = (Attribute) enumAtt.nextElement();
-                        logger.debug("for attr {} of class {}", attr.name(), cl);
+                        logger.debug("for attr {} of class {}", attr.name(), classAtt.value(cl));
                         if (isMentionedIn(attr, rule.m_test)) {
                             attUsed++;
-                            logger.debug("attr {} is mentioned in {}", attr, rule.m_test.toStr());
+                            logger.debug("\tattr {} is mentioned in {}", attr, rule.m_test.toStr(data));
 
                             continue;
                         }
@@ -247,13 +257,15 @@ public class PrismMod01
                                 rule.m_errors = bestCovers - bestCorrect;
                             }
                         }
+
                     }
                     if (test.m_attr == -1) { // Couldn't find any sensible test
+                        logger.debug("Couldn't find any sensible test");
                         break;
                     }
                     logger.debug("add test {} to oldTest {} in rule {}",
-                            test == null? "null": test.toStr(),
-                            oldTest == null ?"null":oldTest.toStr(),
+                            test == null? "null": test.toStr(data),
+                            oldTest == null ?"null":oldTest.toStr(data),
                             rule == null ? "null": rule.toStr());
 
                     oldTest = addTest(rule, oldTest, test);
@@ -267,24 +279,12 @@ public class PrismMod01
                 E = rule.notCoveredBy(E);
             }
         }
+
+        m_rules.clear();
+        m_rules.addAll(rules);
     }
 
-    /**
-     * Add a rule to the ruleset.
-     *
-     * @param lastRule the last rule in the rule set
-     * @param newRule the rule to be added
-     * @return the new last rule in the rule set
-     */
-    private PrismRule addRule(PrismRule lastRule, PrismRule newRule) {
 
-        if (lastRule == null) {
-            m_rules = newRule;
-        } else {
-            lastRule.m_next = newRule;
-        }
-        return newRule;
-    }
 
     /**
      * Add a test to this rule.
@@ -369,7 +369,7 @@ public class PrismMod01
      * @param args the commandline parameters
      */
     public static void main(String[] args) throws Exception{
-        String inFile = "/media/suhel/workspace/work/wekaprism/data/cl.arff";
+        String inFile = "/media/suhel/workspace/work/wekaprism/data/fadi.arff";
 //        String command = "-t "+ inFile + " -T "+ inFile + " -no-cv";
         logger.info("Suhel : "+1);
 //        runClassifier(new Prism(), args);

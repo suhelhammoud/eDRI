@@ -7,6 +7,7 @@ import weka.core.RevisionUtils;
 
 import java.io.Serializable;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -21,10 +22,10 @@ public class PrismRule
     static final long serialVersionUID = 4248784350656508583L;
 
     /** The classification */
-    int m_classification;
+    final int m_classification;
 
     /** The instance */
-    Instances m_instances;
+    final Instances m_instances;
 
     /** First test of this rule */
     Test m_test;
@@ -33,7 +34,7 @@ public class PrismRule
     int m_errors;
 
     /** The next rule in the list */
-    PrismRule m_next;
+//    PrismRule m_next;
 
     /**
      * Constructor that takes instances and the classification.
@@ -45,10 +46,10 @@ public class PrismRule
     public PrismRule(Instances data, int cl) throws Exception {
         this.id = ID.incrementAndGet();
 
-        m_instances = data;//TODO no need to assign data to m_instances
+//        m_instances = data;//TODO no need to assign data to m_instances
         m_classification = cl;
         m_test = null;
-        m_next = null;
+//        m_next = null;
         m_errors = 0;
 
         //count not covered number
@@ -58,7 +59,7 @@ public class PrismRule
                 m_errors++;
             }
         }
-        m_instances = new Instances(m_instances, 0);
+        m_instances = new Instances(data, 0);
     }
 
     /**
@@ -76,23 +77,31 @@ public class PrismRule
         }
     }
 
-    /**
-     * Returns the result assigned by these rules to a given instance.
-     *
-     * @param inst the instance to be classified
-     * @return the classification
-     */
-    public int resultRules(Instance inst) {
+//    /**
+//     * Returns the result assigned by these rules to a given instance.
+//     *
+//     * @param inst the instance to be classified
+//     * @return the classification
+//     */
+//    public int resultRules(Instance inst) {
+//
+//        if (resultRule(inst) != -1) {
+//            return m_classification;
+//        } else if (m_next != null) {
+//            return m_next.resultRules(inst);
+//        } else {
+//            return -1;
+//        }
+//    }
 
-        if (resultRule(inst) != -1) {
-            return m_classification;
-        } else if (m_next != null) {
-            return m_next.resultRules(inst);
-        } else {
-            return -1;
+    public static int classifyInst(Instance instance, List<PrismRule> rules) {
+        for (PrismRule rule : rules) {
+            if (rule.resultRule(instance) != -1) {
+                return rule.m_classification;
+            }
         }
+        return -1;
     }
-
     /**
      * Returns the set of instances that are covered by this rule.
      *
@@ -135,10 +144,12 @@ public class PrismRule
 
     public String toStr() {
         StringBuilder sb = new StringBuilder("R_"+id+"[");
-        sb.append("cls="+ m_classification+ ", inst = "+ m_instances.numInstances()+",");
+        int classIndex = m_instances.classIndex();
+        String label = m_instances.attribute(classIndex).value(m_classification);
+        sb.append("cls="+ label+ ", inst = "+ m_instances.numInstances()+",");
         sb.append("err = "+ m_errors);
         if(m_test != null )
-            sb.append("<" + m_test.toStr() + ">");
+            sb.append("<" + m_test.toStr(m_instances) + ">");
         sb.append("]");
 
         return sb.toString();
@@ -168,9 +179,9 @@ public class PrismRule
                 text.append(" then ");
             }
             text.append(m_instances.classAttribute().value(m_classification) + "\n");
-            if (m_next != null) {
-                text.append(m_next.toString());
-            }
+//            if (m_next != null) {
+//                text.append(m_next.toString());
+//            }
             return text.toString();
         } catch (Exception e) {
             return "Can't print Prism classifier!";
