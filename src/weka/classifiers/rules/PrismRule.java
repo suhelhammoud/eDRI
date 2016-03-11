@@ -133,16 +133,16 @@ public class PrismRule
      */
     public Instances coveredBy(Instances data) {
 
-        Instances r = new Instances(data, data.numInstances());
+        Instances result = new Instances(data, data.numInstances());
         Enumeration enu = data.enumerateInstances();
         while (enu.hasMoreElements()) {
             Instance i = (Instance) enu.nextElement();
             if (resultRule(i) != -1) {
-                r.add(i);
+                result.add(i);
             }
         }
-        r.compactify();
-        return r;
+        result.compactify();
+        return result;
     }
 
     /**
