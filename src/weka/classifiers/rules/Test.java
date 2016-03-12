@@ -83,7 +83,7 @@ public class Test
         sb.append("(att_"+at_name+ " = "+at_val+")");
         Test ntest = m_next;
         while (ntest != null) {
-            sb.append(" -> " + ntest.toStr());
+            sb.append(" -> " + ntest.toStr(data));
             ntest = ntest.m_next;
         }
 

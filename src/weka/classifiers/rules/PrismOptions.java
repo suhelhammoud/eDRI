@@ -19,19 +19,6 @@ public class PrismOptions implements OptionHandler, Serializable{
     static final long serialVersionUID = 1310258880025902107L;
 //    static Logger logger = LoggerFactory.getLogger(PrismOptions.class);
 
-    public SelectedTag getDebugLevel() {
-        return new SelectedTag(m_debugLevel, LEVELS.toTags());
-
-    }
-
-    protected boolean useOldPrism = false;
-    public boolean getUseOldPrism() {
-        return useOldPrism;
-    }
-
-    public void setUseOldPrism(boolean useOldPrism) {
-        this.useOldPrism = useOldPrism;
-    }
 
     enum LEVELS {off, trace, debug, info, warn, error, fatal;
         public static Tag[] toTags(){
@@ -44,10 +31,23 @@ public class PrismOptions implements OptionHandler, Serializable{
         };
     }
 
-
+    protected boolean useOldPrism = true;
     protected String m_debugLevel= "DEBUG";
     protected int minSupport = 1;
     protected double minConfidence = 0.8;
+
+    public SelectedTag getDebugLevel() {
+        return new SelectedTag(m_debugLevel, LEVELS.toTags());
+
+    }
+
+    public boolean getUseOldPrism() {
+        return useOldPrism;
+    }
+
+    public void setUseOldPrism(boolean useOldPrism) {
+        this.useOldPrism = useOldPrism;
+    }
 
     public int getMinSupport() {
         return minSupport;

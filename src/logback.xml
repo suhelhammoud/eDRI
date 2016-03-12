@@ -5,7 +5,7 @@
 
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender" >
-        <file>PrismMod-log-${bySecond}.txt</file>
+        <file>logs/PrismMod-log-${bySecond}.txt</file>
         <append>true</append>
 
         <!-- encoders are assigned the type
@@ -17,9 +17,21 @@
         </encoder>
     </appender>
 
+    <appender name="FREQS" class="ch.qos.logback.core.FileAppender">
+        <file>logs/frequencies-log-${bySecond}.txt</file>
+        <append>true</append>
+
+        <encoder>
+            <pattern> %msg%n</pattern>
+        </encoder>
+    </appender>
     <!--<logger name="weka.classifiers.rules.PrismMod01" level="debug" >-->
         <!--<appender-ref ref="STDOUT"/>-->
     <!--</logger>-->
+
+    <logger name="freqs">
+        <appender-ref ref="FREQS" />
+    </logger>
 
     <root level="debug"  >
         <appender-ref ref="FILE"  />

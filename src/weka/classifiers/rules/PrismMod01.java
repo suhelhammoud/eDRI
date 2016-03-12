@@ -83,6 +83,7 @@ public class PrismMod01
     PrismOptions pOptions = new PrismOptions();
     static ch.qos.logback.classic.Logger lgLevel = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(PrismMod01.class);
     static Logger logger = LoggerFactory.getLogger(PrismMod01.class);
+    static Logger freqsLogger = LoggerFactory.getLogger("freqs");
 
 
 //    protected String m_debugLevel = "warn";
@@ -308,6 +309,8 @@ public class PrismMod01
             Attribute classAtt = data.attribute(data.classIndex());
 
             logger.debug("for class = {}", classAtt.value(cl));
+            freqsLogger.debug("for class = {}", classAtt.value(cl));
+
             logger.debug("reset E from {} to {} instances",
                     E == null ? "null": E.numInstances(),
                     data.numInstances());
@@ -393,6 +396,10 @@ public class PrismMod01
                     }
                 }
 
+                freqsLogger.debug("\nAttr ({}), cover, correct", attr.name());
+                for (int i = 0; i < M; i++) {
+                    freqsLogger.debug("{}, {}, {}", attrNames[i], covers[i], correct[i]);
+                }
 
                 logger.debug("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
 
@@ -434,6 +441,7 @@ public class PrismMod01
                     rule == null ? "null": rule.toStr());
 
 //                    oldTest = addTest(rule, oldTest, test);
+            freqsLogger.debug("add item {}, to rule {}", test.toStr(e), rule.toStr());
             rule.addTest(test);
 
             ruleE = rule.coveredBy(ruleE);
@@ -445,6 +453,7 @@ public class PrismMod01
         }
         Instances result = rule.notCoveredBy(e);
         logger.debug("\tE now contains {} instances\n", result.numInstances());
+        freqsLogger.debug("completed rule {}\n\n", rule.toStr());
         return new Pair<>(rule, result);
     }
 
@@ -500,6 +509,11 @@ public class PrismMod01
                     }
                 }
 
+                freqsLogger.debug("\nAttr ({}), cover, correct", attr.name());
+                for (int i = 0; i < M; i++) {
+                    freqsLogger.debug("{}, {}, {}", attrNames[i], covers[i], correct[i]);
+                }
+
 
                 logger.debug("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
 
@@ -530,6 +544,7 @@ public class PrismMod01
                     rule == null ? "null": rule.toStr());
 
 //                    oldTest = addTest(rule, oldTest, test);
+            freqsLogger.debug("add item {}, to rule {}", test.toStr(e), rule.toStr());
             rule.addTest(test);
 
             ruleE = rule.coveredBy(ruleE);
@@ -541,6 +556,7 @@ public class PrismMod01
         }
         Instances result = rule.notCoveredBy(e);
         logger.debug("\tE now contains {} instances\n", result.numInstances());
+        freqsLogger.debug("completed rule {}\n\n", rule.toStr());
         return new Pair<>(rule, result);
     }
 
@@ -635,6 +651,7 @@ public class PrismMod01
         Instances data = new Instances(readDataFile(inFile));
         data.setClassIndex(data.numAttributes()-1);
         Classifier classifier = new PrismMod01();
+
         classifier.buildClassifier(data);
 
     }
