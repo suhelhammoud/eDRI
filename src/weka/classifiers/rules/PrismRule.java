@@ -56,7 +56,7 @@ public class PrismRule
      * @param cl   the class
      * @throws Exception if something goes wrong
      */
-    public PrismRule(Instances data, int cl) throws Exception {
+    public PrismRule(Instances data, int cl)  {
         this.id = ID.incrementAndGet();
 
 //        m_instances = data;//TODO no need to assign data to m_instances
@@ -73,10 +73,13 @@ public class PrismRule
         //count not covered number
         Enumeration enu = data.enumerateInstances();
         while (enu.hasMoreElements()) {
-            if ((int) ((Instance) enu.nextElement()).classValue() != m_classification) {
+            if ((int) ((Instance) enu.nextElement()).classValue() == m_classification) {
+                m_correct++;
+            } else {
                 m_errors++;
             }
         }
+        m_covers = m_correct + m_errors;
         return m_errors;
     }
 
@@ -233,6 +236,7 @@ public class PrismRule
 
     public boolean isPerfect(int minSupport, double minConf) {
         if (m_errors == 0) return true;
+        if (m_correct >= minSupport) return true;
         if (getConfidence() >= minConf && m_correct >= minSupport) return true;
 //        if(m_correct >= minSupport) return  true;
         return false;

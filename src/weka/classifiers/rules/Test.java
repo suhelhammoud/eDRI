@@ -60,21 +60,21 @@ public class Test
     }
 
 
-    /**
-     * Used by Suhel for logging purposes
-     * @return
-     */
-    public String toStr() {
-        StringBuilder sb = new StringBuilder("T_"+id);
-        sb.append("(att_"+m_attr+ " = "+m_val+")");
-        Test ntest = m_next;
-        while (ntest != null) {
-            sb.append(" -> " + ntest.toStr());
-            ntest = ntest.m_next;
-        }
-
-        return  sb.toString();
-    };
+//    /**
+//     * Used by Suhel for logging purposes
+//     * @return
+//     */
+//    public String toStr() {
+//        StringBuilder sb = new StringBuilder("T_"+id);
+//        sb.append("(att_"+m_attr+ " = "+m_val+")");
+//        Test ntest = m_next;
+//        while (ntest != null) {
+//            sb.append(" -> " + ntest.toStr());
+//            ntest = ntest.m_next;
+//        }
+//
+//        return  sb.toString();
+//    };
 
     public String toStr(Instances data) {
         StringBuilder sb = new StringBuilder("T_"+id);

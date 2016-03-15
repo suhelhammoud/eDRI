@@ -17,7 +17,18 @@ import java.util.Vector;
 public class PrismOptions implements OptionHandler, Serializable{
 
     static final long serialVersionUID = 1310258880025902107L;
-//    static Logger logger = LoggerFactory.getLogger(PrismOptions.class);
+
+    private boolean addDefaultRule = false;
+
+    public boolean getAddDefaultRule() {
+        return addDefaultRule;
+    }
+
+    public void setAddDefaultRule(boolean addDefaultRule) {
+        this.addDefaultRule = addDefaultRule;
+    }
+
+    //    static Logger logger = LoggerFactory.getLogger(PrismOptions.class);
 
 
     enum LEVELS {off, trace, debug, info, warn, error, fatal;
@@ -75,6 +86,7 @@ public class PrismOptions implements OptionHandler, Serializable{
     public Enumeration listOptions() {
         Vector<Option> result = new Vector<>(1);
         result.addElement(new Option("Old Prism algorithm", "P", 0, "-P"));
+        result.addElement(new Option("Add Default Rule?", "R", 0, "-R"));
         result.addElement(new Option("minimum support", "S", 1, "-S <lower bound for minimum support >"));
         result.addElement(new Option("minimum confidence", "C", 1, "-C <minimum confidence of a rule >"));
         result.addElement(new Option("descritption", "D", 1, "-D < off | trace | debug | info | warn | error | fatal >"));
@@ -93,12 +105,13 @@ public class PrismOptions implements OptionHandler, Serializable{
         minSupport = Integer.parseInt(sSupport);
 
         useOldPrism = Utils.getFlag('P', options);
+        addDefaultRule = Utils.getFlag('R', options);
 
     }
 
     @Override
     public String[] getOptions() {
-        String[] result = new String[7];
+        String[] result = new String[8];
         int currentIndex = 0;
         result[currentIndex++] = "-D";
         result[currentIndex++] = m_debugLevel;
@@ -111,6 +124,11 @@ public class PrismOptions implements OptionHandler, Serializable{
 
         if(useOldPrism)
             result[currentIndex++] = "-P";
+        else
+            result[currentIndex++] = "";
+
+        if(addDefaultRule)
+            result[currentIndex++] = "-R";
         else
             result[currentIndex++] = "";
 

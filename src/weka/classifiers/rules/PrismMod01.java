@@ -159,17 +159,21 @@ public class PrismMod01
     @Override
     public void setOptions(String[] options) throws Exception {
         pOptions.setOptions(options);
-//        m_debugLevel = Utils.getOption("D", options);
-
-//        pOptions.setOptions(options);
     }
 
     @Override
     public String[] getOptions() {
         return pOptions.getOptions();
 
-//        return pOptions.getOptions();
     }
+
+    public boolean getAddDefaultRule() {
+        return pOptions.getAddDefaultRule();
+    }
+
+    public void setAddDefaultRule(boolean b) {
+        pOptions.setAddDefaultRule(b);
+    };
 
     public boolean getUseOldPrism() {
         return pOptions.getUseOldPrism();
@@ -196,8 +200,6 @@ public class PrismMod01
 
     public void setDebugLevel(SelectedTag newMethod) {
         pOptions.setDebugLevel(newMethod);
-//        pOptions.setM_debugLevel(newMethod.getSelectedTag().getIDStr());
-//        m_debugLevel = newMethod.getSelectedTag().getIDStr();
     }
 
     public SelectedTag getDebugLevel() {
@@ -256,19 +258,51 @@ public class PrismMod01
 
             while (contains(E, cl)) { // while E contains examples in class cl
                 Pair<PrismRule, Instances> result = ruleInstancesFadi(cl, E, minSupport, minConfidence);
+                if (result == null) {
+                    break;
+                }
                 rules.add(result.key);
                 E = result.value;
             }
 
+
+
             logger.debug("\t switching to next class with E contains {} instances\n", E.numInstances());
 
         }
+
+        if (getAddDefaultRule()) {
+
+            PrismRule defaultRule = getDefaultRule(E);
+            if(defaultRule != null) {
+                rules.add(defaultRule);
+                logger.trace("add defaul rule {}", defaultRule.toStr());
+
+            }
+        }
+        //TODO add default class
         logger.debug("no more classes found");
         m_rules.clear();
         m_rules.addAll(rules);
     }
 
-
+    public PrismRule getDefaultRule(Instances data) {
+        int classIndex = data.classIndex();
+        int[] freqs = new int[data.attribute(classIndex).numValues()];
+        for (int i = 0; i < data.numInstances(); i++) {
+            int cls = (int) data.instance(i).value(classIndex);
+            freqs[cls]++;
+        };
+        int maxVal = Integer.MIN_VALUE;
+        int maxIndex = Integer.MIN_VALUE;
+        for (int i = 0; i < freqs.length; i++) {
+            if (freqs[i] > maxVal) {
+                maxVal = freqs[i];
+                maxIndex = i;
+            }
+        }
+        return new PrismRule(data, maxIndex);
+    }
         /**
          * Generates the classifier.
          *
@@ -345,6 +379,11 @@ public class PrismMod01
     private Pair<PrismRule, Instances> ruleInstancesFadi(int cl, Instances e, int minSupport, double minConfidence) throws Exception {
 //        Instances data = ;
 //        List<PrismRule> rules = ;
+        if (e.numInstances() < minSupport) {
+            logger.trace("remaining instances = {} < {}",
+                    e.numInstances(), minSupport);
+            return null;
+        }
         Attribute classAtt = e.attribute(e.classIndex());
         PrismRule rule;
         Instances ruleE;
@@ -361,7 +400,8 @@ public class PrismMod01
         ruleE = e; // examples covered by this rule
         logger.info("\tstart ruleE  with {} instances", ruleE.numInstances());
 //        while (rule.m_errors != 0) { // until the rule is perfect
-        while (! rule.isPerfect( minSupport,  minConfidence)) { // until the rule is perfect
+//        while (! rule.isPerfect( minSupport,  minConfidence)) { // until the rule is perfect
+        while ( rule.m_errors > 0 && rule.m_correct >= minSupport) { // until the rule is perfect
             logger.debug("\t\tRule {} is not perfect", rule.id);
             test = new Test(); // make a new test
             bestCorrect = bestCovers = attUsed = 0;
@@ -406,18 +446,24 @@ public class PrismMod01
                 int notCovered= -1;
                 // ... for each value of this attribute, see if this test is better
                 for (int val = 0; val < M; val ++) {
+//
+                    if (correct[val] < minSupport) {
+                        continue;
+                    }
                     double conf = (double) correct[val] / (double) covers[val];
+
                     if (conf < minConfidence) {
                         continue;
-                    } else if (correct[val] < minSupport) {
-                            continue;
                     }
 
                     int diff = correct[val] * bestCovers - bestCorrect * covers[val];
 
                     // this is a ratio test, correct/covers vs best correct/covers
-                    if (test.m_attr == -1
-                            || diff > 0 || (diff == 0 && correct[val] > bestCorrect)) {
+//                    if (test.m_attr == -1
+//                            || diff > 0 || (diff == 0 && correct[val] > bestCorrect)) {
+
+
+                    if (diff > 0 || (diff == 0 && correct[val] > bestCorrect) ) {
 
                         // update the rule to use this test
                         bestCorrect = correct[val];
@@ -450,6 +496,9 @@ public class PrismMod01
                 logger.debug("\t\t\tused all the attributes, break loop");
                 break;
             }
+        }
+        if (rule.m_test == null) {
+            return null;
         }
         Instances result = rule.notCoveredBy(e);
         logger.debug("\tE now contains {} instances\n", result.numInstances());
