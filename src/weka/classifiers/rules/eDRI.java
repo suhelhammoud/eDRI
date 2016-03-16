@@ -26,80 +26,95 @@ import ch.qos.logback.classic.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import weka.classifiers.Classifier;
+import weka.classifiers.rules.edri.DRIOptions;
+import weka.classifiers.rules.edri.DRIRule;
+import weka.classifiers.rules.edri.DRITest;
+import weka.classifiers.rules.edri.EDRIUtils;
 import weka.core.*;
 import weka.core.Capabilities.Capability;
 import weka.core.TechnicalInformation.Field;
 import weka.core.TechnicalInformation.Type;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.util.*;
 
-
 /**
- <!-- globalinfo-start -->
- * Class for building and using a PRISM rule set for classification. Can only deal with nominal attributes. Can't deal with missing values. Doesn't do any pruning.<br/>
+ * <!-- globalinfo-start -->
+ * Class for building and using a eDRI rule set for classification. Can only deal with nominal attributes. Can't deal with missing values. Doesn't do any pruning.<br/>
  * <br/>
  * For more information, see <br/>
  * <br/>
- * J. Cendrowska (1987). PRISM: An algorithm for inducing modular rules. International Journal of Man-Machine Studies. 27(4):349-370.
- * <p/>
- <!-- globalinfo-end -->
- *
- <!-- technical-bibtex-start -->
+ * J. F. Thabatah, S. Hammoud
+ * <p>
+ * <!-- globalinfo-end -->
+ * <p>
+ * <!-- technical-bibtex-start -->
  * BibTeX:
  * <pre>
- * &#64;article{Cendrowska1987,
- *    author = {J. Cendrowska},
- *    journal = {International Journal of Man-Machine Studies},
- *    number = {4},
- *    pages = {349-370},
- *    title = {PRISM: An algorithm for inducing modular rules},
- *    volume = {27},
- *    year = {1987}
+ * &#64;article{ref here,
+ *    author = {F. Thabatah},
+ *    journal = { Journal Ref. here},
+ *    number = {number},
+ *    pages = {pagestart - pageend},
+ *    title = {eDRI enhanced Dynamic Rule Induction},
+ *    volume = {vol},
+ *    year = {2016}
  * }
  * </pre>
- * <p/>
- <!-- technical-bibtex-end -->
- *
- <!-- options-start -->
+ * <p>
+ * <!-- technical-bibtex-end -->
+ * <p>
+ * <!-- options-start -->
  * Valid options are: <p/>
+ * <p>
+ * <pre>
+ *     TODO: add later
+ * </pre>
+ * <p>
+ * <!-- options-end -->
  *
- * <pre> -D
- *  If set, classifier is run in debug mode and
- *  may output additional info to the console</pre>
- *
- <!-- options-end -->
- *
- * @author Ian H. Witten (ihw@cs.waikato.ac.nz)
- * @version $Revision: 5529 $
+ * @author Suhel Hammmoud (suhel.hammoud@gmail.com)
+ * @version $Revision: 001 $
  */
-public class PrismMod01
+public class eDRI
         extends Classifier
         implements OptionHandler, TechnicalInformationHandler {
 
 
-    PrismOptions pOptions = new PrismOptions();
-    static ch.qos.logback.classic.Logger lgLevel = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(PrismMod01.class);
-    static Logger logger = LoggerFactory.getLogger(PrismMod01.class);
+    /**
+     * Helper class to hold the result of ruleInstancesxxx(xxx)
+     *
+     * @param <K> key
+     * @param <V> value
+     */
+    class Pair<K, V> {
+        final public K key;
+        final public V value;
+
+        Pair(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
+
+    static ch.qos.logback.classic.Logger lgLevel = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(eDRI.class);
+    static Logger logger = LoggerFactory.getLogger(eDRI.class);
     static Logger freqsLogger = LoggerFactory.getLogger("freqs");
 
 
-//    protected String m_debugLevel = "warn";
-
-     /** for serialization */
+    /**
+     * for serialization
+     */
     static final long serialVersionUID = 1310258880025902107L;
 
     /**
      * Returns a string describing classifier
+     *
      * @return a description suitable for
      * displaying in the explorer/experimenter gui
      */
     public String globalInfo() {
-        return "Class for building and using a PRISM rule set for classification. "
+        return "Class for building and using a eDRI rule set for classification. "
                 + "Can only deal with nominal attributes. Can't deal with missing values. "
-                + "Doesn't do any pruning.\n\n"
                 + "For more information, see \n\n"
                 + getTechnicalInformation().toString();
     }
@@ -112,27 +127,29 @@ public class PrismMod01
      * @return the technical information about this class
      */
     public TechnicalInformation getTechnicalInformation() {
-        TechnicalInformation 	result;
+        TechnicalInformation result;
 
         result = new TechnicalInformation(Type.ARTICLE);
-        result.setValue(Field.AUTHOR, "J. Cendrowska");
-        result.setValue(Field.YEAR, "1987");
-        result.setValue(Field.TITLE, "PRISM: An algorithm for inducing modular rules");
-        result.setValue(Field.JOURNAL, "International Journal of Man-Machine Studies");
-        result.setValue(Field.VOLUME, "27");
-        result.setValue(Field.NUMBER, "4");
-        result.setValue(Field.PAGES, "349-370");
-
-
-
+        result.setValue(Field.AUTHOR, "F. Thabatah, S. Hammoud");
+        result.setValue(Field.YEAR, "2016");
+        result.setValue(Field.TITLE, "eDRI: An algorithm for inducing modular rules");
+        result.setValue(Field.JOURNAL, "Journal");
+        result.setValue(Field.VOLUME, "vol");
+        result.setValue(Field.NUMBER, "number");
+        result.setValue(Field.PAGES, "p_start-p_end");
         return result;
     }
 
 
+    /**
+     * Holds algorithm configurations and OptionHandler parameters
+     */
+    private DRIOptions pOptions = new DRIOptions();
 
-
-    /** The first rule in the list of rules */
-    private List<PrismRule> m_rules = new ArrayList<>();
+    /**
+     * List of all rules
+     */
+    private List<DRIRule> m_rules = new ArrayList<>();
 
     /**
      * Classifies a given instance.
@@ -142,18 +159,17 @@ public class PrismMod01
      */
     public double classifyInstance(Instance inst) {
 
-        int result = PrismRule.classifyInst(inst, m_rules);
+        int result = DRIRule.classifyInst(inst, m_rules);
         if (result == -1) {
             return Instance.missingValue();
         } else {
-            return (double)result;
+            return (double) result;
         }
     }
 
     @Override
     public Enumeration listOptions() {
-        return  pOptions.listOptions();
-//        return pOptions.listOptions();
+        return pOptions.listOptions();
     }
 
     @Override
@@ -173,7 +189,7 @@ public class PrismMod01
 
     public void setAddDefaultRule(boolean b) {
         pOptions.setAddDefaultRule(b);
-    };
+    }
 
     public boolean getUseOldPrism() {
         return pOptions.getUseOldPrism();
@@ -182,11 +198,12 @@ public class PrismMod01
     public void setUseOldPrism(boolean b) {
         pOptions.setUseOldPrism(b);
     }
-    public int getMinSupport() {
+
+    public double getMinSupport() {
         return pOptions.getMinSupport();
     }
 
-    public void setMinSupport(int support) {
+    public void setMinSupport(double support) {
         pOptions.setMinSupport(support);
     }
 
@@ -213,7 +230,7 @@ public class PrismMod01
     /**
      * Returns default capabilities of the classifier.
      *
-     * @return      the capabilities of this classifier
+     * @return the capabilities of this classifier
      */
     public Capabilities getCapabilities() {
         Capabilities result = super.getCapabilities();
@@ -229,15 +246,24 @@ public class PrismMod01
         return result;
     }
 
-    public void buildClassifierFadi(Instances data, int minSupport, double minConfidence) throws Exception {
+    /**
+     * After running, m_rules will be refilled with new learned rules, oPtion will holds values of:
+     * maxNumInstances: data.numInstances
+     *
+     * @param data:          training dataset
+     * @param minFreqs:      minimum frequency threshold, (numInstances * minSupport)
+     * @param minConfidence: confidence threshold
+     * @throws Exception
+     */
+    public void buildClassifierEDRI(Instances data, int minFreqs, double minConfidence) throws Exception {
 
-        List<PrismRule> rules = new ArrayList<>(data.numAttributes());
+        List<DRIRule> rules = new ArrayList<>(data.numAttributes());
         int cl; // possible value of theClass
         Instances E = null, ruleE;
-        PrismRule rule = null;
+        DRIRule rule = null;
 
-        Test test = null;
-        Test oldTest = null;
+        DRITest DRITest = null;
+        DRITest oldDRITest = null;
         int bestCorrect, bestCovers, attUsed;
         Enumeration enumAtt;
 
@@ -245,54 +271,56 @@ public class PrismMod01
         getCapabilities().testWithFail(data);
 
         // remove instances with missing class
-        data = new Instances(data);
+        data = new Instances(data);//defensive copy of the data
         data.deleteWithMissingClass();
         for (cl = 0; cl < data.numClasses(); cl++) { // for each class cl
             Attribute classAtt = data.attribute(data.classIndex());
 
-            logger.debug("for class = {}", classAtt.value(cl));
-            logger.debug("reset E from {} to {} instances",
-                    E == null ? "null": E.numInstances(),
+            logger.trace("for class = {}", classAtt.value(cl));
+            logger.trace("reset E from {} to {} instances",
+                    E == null ? "null" : E.numInstances(),
                     data.numInstances());
             E = data; // initialize E to the instance set
 
             while (contains(E, cl)) { // while E contains examples in class cl
-                Pair<PrismRule, Instances> result = ruleInstancesFadi(cl, E, minSupport, minConfidence);
+                Pair<DRIRule, Instances> result = ruleInstancesEDRI(cl, E, minFreqs, minConfidence);
                 if (result == null) {
                     break;
                 }
                 rules.add(result.key);
                 E = result.value;
             }
-
-
-
-            logger.debug("\t switching to next class with E contains {} instances\n", E.numInstances());
-
+            logger.trace("\t switching to next class with E contains {} instances\n", E.numInstances());
         }
 
         if (getAddDefaultRule()) {
 
-            PrismRule defaultRule = getDefaultRule(E);
-            if(defaultRule != null) {
+            DRIRule defaultRule = getDefaultRule(E);
+            if (defaultRule != null) {
                 rules.add(defaultRule);
                 logger.trace("add defaul rule {}", defaultRule.toStr());
-
             }
         }
         //TODO add default class
-        logger.debug("no more classes found");
+        logger.trace("no more classes found");
         m_rules.clear();
         m_rules.addAll(rules);
     }
 
-    public PrismRule getDefaultRule(Instances data) {
+    /**
+     * Gets the majority class of the remaining instances as DRIRule
+     *
+     * @param data: Remaining dataset
+     * @return: DRIRule of the majority class
+     */
+    public DRIRule getDefaultRule(Instances data) {
         int classIndex = data.classIndex();
         int[] freqs = new int[data.attribute(classIndex).numValues()];
         for (int i = 0; i < data.numInstances(); i++) {
             int cls = (int) data.instance(i).value(classIndex);
             freqs[cls]++;
-        };
+        }
+        ;
         int maxVal = Integer.MIN_VALUE;
         int maxIndex = Integer.MIN_VALUE;
         for (int i = 0; i < freqs.length; i++) {
@@ -301,35 +329,44 @@ public class PrismMod01
                 maxIndex = i;
             }
         }
-        return new PrismRule(data, maxIndex);
+        return new DRIRule(data, maxIndex);
     }
-        /**
-         * Generates the classifier.
-         *
-         * @param data the data to be used
-         * @exception Exception if the classifier can't built successfully
-         */
+
+    /**
+     * Generates the classifier.
+     *
+     * @param data the data to be used
+     * @throws Exception if the classifier can't built successfully
+     */
     public void buildClassifier(Instances data) throws Exception {
 
-        lgLevel.setLevel(Level.toLevel(pOptions.m_debugLevel));
+        lgLevel.setLevel(Level.toLevel(pOptions.debugLevel()));
+        pOptions.setMaxNumInstances(data.numInstances());
 
         if (pOptions.getUseOldPrism()) {
             buildClassifierPrism(data);
         } else {
-            buildClassifierFadi(data, pOptions.minSupport, pOptions.minConfidence);
+            double minSupport = pOptions.getMinSupport();
+            double minConfidence = pOptions.getMinConfidence();
+            int minFreq = (int) Math.ceil(minSupport * data.numInstances());
+            logger.info("Build classifier on {}, # Instances = {}, minSupport={} minFreq ={}, minConfidence={}",
+                    data.relationName(), data.numInstances(), minSupport, minFreq, minConfidence);
+            freqsLogger.info("Build classifier on {}, # Instances = {}, minSupport={} minFreq ={}, minConfidence={}",
+                    data.relationName(), data.numInstances(), minSupport, minFreq, minConfidence);
+            buildClassifierEDRI(data, minFreq, minConfidence);
         }
 
     }
 
     public void buildClassifierPrism(Instances data) throws Exception {
-        List<PrismRule> rules = new ArrayList<>(data.numAttributes());
+        List<DRIRule> rules = new ArrayList<>(data.numAttributes());
 
         int cl; // possible value of theClass
         Instances E = null, ruleE;
-        PrismRule rule = null;
+        DRIRule rule = null;
 
-        Test test = null;
-        Test oldTest = null;
+        DRITest DRITest = null;
+        DRITest oldDRITest = null;
         int bestCorrect, bestCovers, attUsed;
         Enumeration enumAtt;
 
@@ -342,83 +379,69 @@ public class PrismMod01
         for (cl = 0; cl < data.numClasses(); cl++) { // for each class cl
             Attribute classAtt = data.attribute(data.classIndex());
 
-            logger.debug("for class = {}", classAtt.value(cl));
-            freqsLogger.debug("for class = {}", classAtt.value(cl));
+            logger.trace("for class = {}", classAtt.value(cl));
+            freqsLogger.trace("for class = {}", classAtt.value(cl));
 
-            logger.debug("reset E from {} to {} instances",
-                    E == null ? "null": E.numInstances(),
+            logger.trace("reset E from {} to {} instances",
+                    E == null ? "null" : E.numInstances(),
                     data.numInstances());
             E = data; // initialize E to the instance set
 
             while (contains(E, cl)) { // while E contains examples in class cl
-                Pair<PrismRule, Instances> result = ruleInstances(cl, E);
+                Pair<DRIRule, Instances> result = ruleInstancesPrism(cl, E);
                 rules.add(result.key);
                 E = result.value;
             }
-
-            logger.debug("\t switching to next class with E contains {} instances\n", E.numInstances());
-
+            logger.trace("\t switching to next class with E contains {} instances\n", E.numInstances());
         }
-        logger.debug("no more classes found");
+        logger.trace("no more classes found");
         m_rules.clear();
         m_rules.addAll(rules);
     }
 
 
-    class Pair<K, V>{
-        final public  K key;
-        final public V value;
-
-        Pair(K key, V value) {
-            this.key = key;
-            this.value = value;
-        }
-    }
-
-
-    private Pair<PrismRule, Instances> ruleInstancesFadi(int cl, Instances e, int minSupport, double minConfidence) throws Exception {
+    private Pair<DRIRule, Instances> ruleInstancesEDRI(int cl, Instances e, int minFreqs, double minConfidence) throws Exception {
 //        Instances data = ;
-//        List<PrismRule> rules = ;
-        if (e.numInstances() < minSupport) {
+//        List<DRIRule> rules = ;
+        if (e.numInstances() < minFreqs) {
             logger.trace("remaining instances = {} < {}",
-                    e.numInstances(), minSupport);
+                    e.numInstances(), minFreqs);
             return null;
         }
         Attribute classAtt = e.attribute(e.classIndex());
-        PrismRule rule;
+        DRIRule rule;
         Instances ruleE;
-        Test test;
+        DRITest driTest;
         int attUsed;
         int bestCovers;
         int bestCorrect;
         Enumeration enumAtt;
-        logger.debug("\tE contains {} class\n", classAtt.value(cl));
-        rule = new PrismRule(e, cl);
+        logger.trace("\tE contains {} class\n", classAtt.value(cl));
+        rule = new DRIRule(e, cl);
         rule.updateAndGetNotCovered(e);
 
-        logger.debug("\tNew rule {}", rule.toStr());
+        logger.trace("\tNew rule {}", rule.toStr());
         ruleE = e; // examples covered by this rule
-        logger.info("\tstart ruleE  with {} instances", ruleE.numInstances());
-//        while (rule.m_errors != 0) { // until the rule is perfect
-//        while (! rule.isPerfect( minSupport,  minConfidence)) { // until the rule is perfect
-        while ( rule.m_errors > 0 && rule.m_correct >= minSupport) { // until the rule is perfect
-            logger.debug("\t\tRule {} is not perfect", rule.id);
-            test = new Test(); // make a new test
+        logger.trace("\tstart ruleE  with {} instances", ruleE.numInstances());
+
+        while (rule.m_errors > 0 && rule.m_correct >= minFreqs) { // until the rule is perfect
+            logger.trace("\t\tRule {} is not perfect", rule.id);
+            driTest = new DRITest(); // make a new DRITest
             bestCorrect = bestCovers = attUsed = 0;
 
             // for every attribute not mentioned in the rule
             enumAtt = ruleE.enumerateAttributes();
             while (enumAtt.hasMoreElements()) {
                 Attribute attr = (Attribute) enumAtt.nextElement();
-                logger.debug("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
-                if (isMentionedIn(attr, rule.m_test)) {
+                logger.trace("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
+                if (isMentionedIn(attr, rule.m_text)) {
                     attUsed++;
-                    logger.debug("\t\t\tSkip attr {}", attr, attr.name());
+                    logger.trace("\t\t\tSkip attr {}", attr, attr.name());
                     continue;
                 }
                 int M = attr.numValues();
-                int[] covers = new int [M];
-                int[] correct = new int [M];
+                int[] covers = new int[M];
+                int[] correct = new int[M];
                 String[] attrNames = new String[M];
 
                 for (int j = 0; j < M; j++) {
@@ -436,18 +459,18 @@ public class PrismMod01
                     }
                 }
 
-                freqsLogger.debug("\nAttr ({}), cover, correct", attr.name());
+                freqsLogger.trace("\nAttr ({}), cover, correct", attr.name());
                 for (int i = 0; i < M; i++) {
-                    freqsLogger.debug("{}, {}, {}", attrNames[i], covers[i], correct[i]);
+                    freqsLogger.trace("{}, {}, {}", attrNames[i], covers[i], correct[i]);
                 }
 
-                logger.debug("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
+                logger.trace("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
 
-                int notCovered= -1;
-                // ... for each value of this attribute, see if this test is better
-                for (int val = 0; val < M; val ++) {
+                int notCovered = -1;
+                // ... for each value of this attribute, see if this DRITest is better
+                for (int val = 0; val < M; val++) {
 //
-                    if (correct[val] < minSupport) {
+                    if (correct[val] < minFreqs) {
                         continue;
                     }
                     double conf = (double) correct[val] / (double) covers[val];
@@ -458,89 +481,79 @@ public class PrismMod01
 
                     int diff = correct[val] * bestCovers - bestCorrect * covers[val];
 
-                    // this is a ratio test, correct/covers vs best correct/covers
-//                    if (test.m_attr == -1
-//                            || diff > 0 || (diff == 0 && correct[val] > bestCorrect)) {
+                    if (diff > 0 || (diff == 0 && correct[val] > bestCorrect)) {
 
-
-                    if (diff > 0 || (diff == 0 && correct[val] > bestCorrect) ) {
-
-                        // update the rule to use this test
+                        // update the rule to use this DRITest
                         bestCorrect = correct[val];
                         bestCovers = covers[val];
-                        test.m_attr = attr.index();
-                        test.m_val = val;
+                        driTest.m_attr = attr.index();
+                        driTest.m_val = val;
 //                        notCovered = bestCovers - bestCorrect;
                         rule.m_errors = bestCovers - bestCorrect;
                         rule.m_covers = bestCovers;
                         rule.m_correct = bestCorrect;
                     }
                 }
-
             }
-            if (test.m_attr == -1) { // Couldn't find any sensible test
-                logger.debug("\t\t\tCouldn't find any sensible test");
+            if (driTest.m_attr == -1) { // Couldn't find any sensible DRITest
+                logger.trace("\t\t\tCouldn't find any sensible DRITest");
                 break;
             }
-            logger.debug("\t\t\tAdd test {} to rule {}",
-                    test == null? "null": test.toStr(e),
-                    rule == null ? "null": rule.toStr());
+            logger.trace("\t\t\tAdd DRITest {} to rule {}",
+                    driTest == null ? "null" : driTest.toStr(e),
+                    rule == null ? "null" : rule.toStr());
 
-//                    oldTest = addTest(rule, oldTest, test);
-            freqsLogger.debug("add item {}, to rule {}", test.toStr(e), rule.toStr());
-            rule.addTest(test);
+            freqsLogger.trace("add item {}, to rule {}", driTest.toStr(e), rule.toStr());
+            rule.addTest(driTest);
 
             ruleE = rule.coveredBy(ruleE);
-            logger.debug("\t\t\tR_{} coveredBy {}", rule.id, ruleE.numInstances());
+            logger.trace("\t\t\tR_{} coveredBy {}", rule.id, ruleE.numInstances());
             if (attUsed == (e.numAttributes() - 1)) { // Used all attributes.
-                logger.debug("\t\t\tused all the attributes, break loop");
+                logger.trace("\t\t\tused all the attributes, break loop");
                 break;
             }
         }
-        if (rule.m_test == null) {
+        if (rule.m_text == null) {
             return null;
         }
         Instances result = rule.notCoveredBy(e);
-        logger.debug("\tE now contains {} instances\n", result.numInstances());
-        freqsLogger.debug("completed rule {}\n\n", rule.toStr());
+        logger.trace("\tE now contains {} instances\n", result.numInstances());
+        freqsLogger.trace("completed rule {}\n\n", rule.toStr());
         return new Pair<>(rule, result);
     }
 
-    private Pair<PrismRule, Instances> ruleInstances(int cl, Instances e) throws Exception {
-//        Instances data = ;
-//        List<PrismRule> rules = ;
+    private Pair<DRIRule, Instances> ruleInstancesPrism(int cl, Instances e) throws Exception {
         Attribute classAtt = e.attribute(e.classIndex());
-        PrismRule rule;
+        DRIRule rule;
         Instances ruleE;
-        Test test;
+        DRITest DRITest;
         int attUsed;
         int bestCovers;
         int bestCorrect;
         Enumeration enumAtt;
-        logger.debug("\tE contains {} class\n", classAtt.value(cl));
-        rule = new PrismRule(e, cl);
+        logger.trace("\tE contains {} class\n", classAtt.value(cl));
+        rule = new DRIRule(e, cl);
         rule.updateAndGetNotCovered(e);
-//        rules.add(rule);
-        logger.debug("\tNew rule {}", rule.toStr());
+        logger.trace("\tNew rule {}", rule.toStr());
         ruleE = e; // examples covered by this rule
-        logger.info("\truleE {}", ruleE.numInstances());
+        logger.trace("\truleE {}", ruleE.numInstances());
         while (rule.m_errors != 0) { // until the rule is perfect
-            test = new Test(); // make a new test
+            DRITest = new DRITest(); // make a new DRITest
             bestCorrect = bestCovers = attUsed = 0;
 
             // for every attribute not mentioned in the rule
             enumAtt = ruleE.enumerateAttributes();
             while (enumAtt.hasMoreElements()) {
                 Attribute attr = (Attribute) enumAtt.nextElement();
-                logger.debug("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
-                if (isMentionedIn(attr, rule.m_test)) {
+                logger.trace("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
+                if (isMentionedIn(attr, rule.m_text)) {
                     attUsed++;
-                    logger.debug("\t\t\tSkip attr {}", attr, attr.name());
+                    logger.trace("\t\t\tSkip attr {}", attr, attr.name());
                     continue;
                 }
                 int M = attr.numValues();
-                int[] covers = new int [M];
-                int[] correct = new int [M];
+                int[] covers = new int[M];
+                int[] correct = new int[M];
                 String[] attrNames = new String[M];
 
                 for (int j = 0; j < M; j++) {
@@ -558,74 +571,56 @@ public class PrismMod01
                     }
                 }
 
-                freqsLogger.debug("\nAttr ({}), cover, correct", attr.name());
+                freqsLogger.trace("\nAttr ({}), cover, correct", attr.name());
                 for (int i = 0; i < M; i++) {
-                    freqsLogger.debug("{}, {}, {}", attrNames[i], covers[i], correct[i]);
+                    freqsLogger.trace("{}, {}, {}", attrNames[i], covers[i], correct[i]);
                 }
 
 
-                logger.debug("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
+                logger.trace("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
 
-                // ... for each value of this attribute, see if this test is better
-                for (int val = 0; val < M; val ++) {
+                // ... for each value of this attribute, see if this DRITest is better
+                for (int val = 0; val < M; val++) {
                     int diff = correct[val] * bestCovers - bestCorrect * covers[val];
 
-                    // this is a ratio test, correct/covers vs best correct/covers
-                    if (test.m_attr == -1
+                    // this is a ratio DRITest, correct/covers vs best correct/covers
+                    if (DRITest.m_attr == -1
                             || diff > 0 || (diff == 0 && correct[val] > bestCorrect)) {
 
-                        // update the rule to use this test
+                        // update the rule to use this DRITest
                         bestCorrect = correct[val];
                         bestCovers = covers[val];
-                        test.m_attr = attr.index();
-                        test.m_val = val;
+                        DRITest.m_attr = attr.index();
+                        DRITest.m_val = val;
                         rule.m_errors = bestCovers - bestCorrect;
+                        rule.m_covers = bestCovers;
+                        rule.m_correct = bestCorrect;
                     }
                 }
-
             }
-            if (test.m_attr == -1) { // Couldn't find any sensible test
-                logger.debug("\t\t\tCouldn't find any sensible test");
+            if (DRITest.m_attr == -1) { // Couldn't find any sensible DRITest
+                logger.trace("\t\t\tCouldn't find any sensible DRITest");
                 break;
             }
-            logger.debug("\t\t\tAdd test {} to rule {}",
-                    test == null? "null": test.toStr(e),
-                    rule == null ? "null": rule.toStr());
+            logger.trace("\t\t\tAdd DRITest {} to rule {}",
+                    DRITest == null ? "null" : DRITest.toStr(e),
+                    rule == null ? "null" : rule.toStr());
 
-//                    oldTest = addTest(rule, oldTest, test);
-            freqsLogger.debug("add item {}, to rule {}", test.toStr(e), rule.toStr());
-            rule.addTest(test);
+//                    oldTest = addTest(rule, oldTest, DRITest);
+            freqsLogger.trace("add item {}, to rule {}", DRITest.toStr(e), rule.toStr());
+            rule.addTest(DRITest);
 
             ruleE = rule.coveredBy(ruleE);
-            logger.debug("\t\t\tR_{} coveredBy {}", rule.id, ruleE.numInstances());
+            logger.trace("\t\t\tR_{} coveredBy {}", rule.id, ruleE.numInstances());
             if (attUsed == (e.numAttributes() - 1)) { // Used all attributes.
-                logger.debug("\t\t\tused all the attributes, break loop");
+                logger.trace("\t\t\tused all the attributes, break loop");
                 break;
             }
         }
         Instances result = rule.notCoveredBy(e);
-        logger.debug("\tE now contains {} instances\n", result.numInstances());
-        freqsLogger.debug("completed rule {}\n\n", rule.toStr());
+        logger.trace("\tE now contains {} instances\n", result.numInstances());
+        freqsLogger.trace("completed rule {}\n\n", rule.toStr());
         return new Pair<>(rule, result);
-    }
-
-
-    /**
-     * Add a test to this rule.
-     *
-     * @param rule the rule to which test is to be added
-     * @param lastTest the rule's last test
-     * @param newTest the test to be added
-     * @return the new last test of the rule
-     */
-    private Test addTest(PrismRule rule, Test lastTest, Test newTest) {
-
-        if (rule.m_test == null) {
-            rule.m_test = newTest;
-        } else {
-            lastTest.m_next = newTest;
-        }
-        return newTest;
     }
 
     /**
@@ -651,10 +646,10 @@ public class PrismMod01
      * Is this attribute mentioned in the rule?
      *
      * @param attr the attribute to be checked for
-     * @param t test contained by rule
+     * @param t    test contained by rule
      * @return true if the attribute is mentioned in the rule
      */
-    private static boolean isMentionedIn(Attribute attr, Test t) {
+    private static boolean isMentionedIn(Attribute attr, DRITest t) {
 
         if (t == null) {
             return false;
@@ -671,20 +666,41 @@ public class PrismMod01
      * @return a description of the classifier as a string
      */
     public String toString() {
-
+        int maxDigits = pOptions.getMaxNumInstances();
         if (m_rules == null) {
             return "Prism: No model built yet.";
         }
-        return "Prism rules\n----------\n" + m_rules.toString();
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("Number of rules generated = " + m_rules.size());
+        String intPattern = EDRIUtils.formatIntPattern(m_rules.size());
+        sb.append("\nPrism rules ( frequency, confidence ) \n----------\n");
+        for (int i = 0; i < m_rules.size(); i++) {
+            DRIRule rule = m_rules.get(i);
+            sb.append(String.format(intPattern + "- ", i) + rule.toString(maxDigits) + "\n");
+        }
+
+        sb.append(String.format("Avg. Rule Length = %2.2f", getAvgRuleLength(m_rules)) + "\n");
+        return sb.toString();
+    }
+
+    //all based of all number of instances, remaining default rule length = 0
+    private double getAvgRuleLength(List<DRIRule> rules) {
+        double result = 0;
+        for (DRIRule rule : rules) {
+            result += rule.getLenghtWeighted();
+        }
+        return result / (double) pOptions.getMaxNumInstances();
     }
 
     /**
      * Returns the revision string.
      *
-     * @return		the revision
+     * @return the revision
      */
     public String getRevision() {
-        return RevisionUtils.extract("$Revision: 5529 $");
+        return RevisionUtils.extract("$Revision: 001 $");
     }
 
     /**
@@ -692,29 +708,17 @@ public class PrismMod01
      *
      * @param args the commandline parameters
      */
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
         String inFile = "/media/suhel/workspace/work/wekaprism/data/fadi.arff";
 //        String command = "-t "+ inFile + " -T "+ inFile + " -no-cv";
 //        runClassifier(new Prism(), args);
 
-        Instances data = new Instances(readDataFile(inFile));
-        data.setClassIndex(data.numAttributes()-1);
-        Classifier classifier = new PrismMod01();
+        Instances data = new Instances(EDRIUtils.readDataFile(inFile));
+        data.setClassIndex(data.numAttributes() - 1);
+        Classifier classifier = new eDRI();
 
         classifier.buildClassifier(data);
 
     }
 
-
-    public static BufferedReader readDataFile(String filename) {
-        BufferedReader inputReader = null;
-
-        try {
-            inputReader = new BufferedReader(new FileReader(filename));
-        } catch (FileNotFoundException ex) {
-            System.err.println("File not found: " + filename);
-        }
-
-        return inputReader;
-    }
 }

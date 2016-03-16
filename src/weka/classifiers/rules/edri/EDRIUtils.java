@@ -1,4 +1,4 @@
-package weka.classifiers.rules;
+package weka.classifiers.rules.edri;
 
 import weka.core.Attribute;
 import weka.core.Instance;
@@ -15,7 +15,7 @@ import java.util.Enumeration;
 /**
  * Created by suhel on 12/03/16.
  */
-public class PrisimUtilities {
+public class EDRIUtils {
 
     public static String[] classNames(Instances data) {
         return itemNames(data, data.classIndex());
@@ -29,6 +29,11 @@ public class PrisimUtilities {
         }
         return result;
     }
+
+    public static String formatIntPattern(int maxDigit) {
+        int digits = (int) (Math.ceil(Math.log10(maxDigit+1)));
+        return  "%0"+ digits +"d";
+    };
 
     public static String[] attrNames(Instances data) {
         String[] result = new String[data.numAttributes()];
@@ -79,7 +84,6 @@ public class PrisimUtilities {
         return sb.toString();
     }
 
-    ;
 
     public static BufferedReader readDataFile(String filename) {
         BufferedReader inputReader = null;
@@ -109,21 +113,10 @@ public class PrisimUtilities {
 //        runClassifier(new Prism(), args);
 
 
-        Instances data = new Instances(readDataFile(inFile));
-        data.setClassIndex(data.numAttributes() - 1);
+        String p = formatIntPattern(1);
+        System.out.println(p);
+        System.out.println(String.format(p, 77777733));
 
-        System.out.println(Arrays.toString(classNames(data)));
-
-        String[] attrs = attrNames(data);
-        System.out.println(Arrays.toString(attrs));
-
-        String[] items = itemNames(data, 0);
-        System.out.println(Arrays.toString(items));
-
-        int[][] itemsfreqs = itemsLabelOfAttr(data, 0);
-        System.out.println(toString(itemsfreqs));
-
-        System.out.println(Arrays.toString(sumLines(itemsfreqs)));
     }
 
 }

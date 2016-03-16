@@ -1,4 +1,4 @@
-package weka.classifiers.rules;
+package weka.classifiers.rules.edri;
 
 import weka.core.Instance;
 import weka.core.Instances;
@@ -11,26 +11,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Class for storing a list of attribute-value tests
  */
-public class Test
+public class DRITest
         implements Serializable, RevisionHandler {
 
     final private static AtomicInteger ID = new AtomicInteger() ;
     final public int id;
 
-    public Test() {
+    public DRITest() {
         this.id = ID.incrementAndGet();
     }
     /** for serialization */
-    static final long serialVersionUID = -8925333011350280799L;
+    static final long serialVersionUID = -8925356011350280799L;
 
     /** Attribute to test */
-    int m_attr = -1;
+    public int m_attr = -1;
 
     /** The attribute's value */
-    int m_val;
+    public int m_val;
 
     /** The next test in the rule */
-    Test m_next = null;
+    public DRITest m_next = null;
 
     /**
      * Returns whether a given instance satisfies this test.
@@ -56,32 +56,16 @@ public class Test
      * @return		the revision
      */
     public String getRevision() {
-        return RevisionUtils.extract("$Revision: 5529 $");
+        return RevisionUtils.extract("$Revision: 001 $");
     }
 
-
-//    /**
-//     * Used by Suhel for logging purposes
-//     * @return
-//     */
-//    public String toStr() {
-//        StringBuilder sb = new StringBuilder("T_"+id);
-//        sb.append("(att_"+m_attr+ " = "+m_val+")");
-//        Test ntest = m_next;
-//        while (ntest != null) {
-//            sb.append(" -> " + ntest.toStr());
-//            ntest = ntest.m_next;
-//        }
-//
-//        return  sb.toString();
-//    };
 
     public String toStr(Instances data) {
         StringBuilder sb = new StringBuilder("T_"+id);
         String at_name = data.attribute(m_attr).name();
         String at_val = data.attribute(m_attr).value(m_val);
         sb.append("(att_"+at_name+ " = "+at_val+")");
-        Test ntest = m_next;
+        DRITest ntest = m_next;
         while (ntest != null) {
             sb.append(" -> " + ntest.toStr(data));
             ntest = ntest.m_next;
@@ -89,4 +73,6 @@ public class Test
 
         return  sb.toString();
     };
+
+
 }

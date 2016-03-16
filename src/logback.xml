@@ -25,7 +25,7 @@
             <pattern> %msg%n</pattern>
         </encoder>
     </appender>
-    <!--<logger name="weka.classifiers.rules.PrismMod01" level="debug" >-->
+    <!--<logger name="weka.classifiers.rules.eDRIl="debug" >-->
         <!--<appender-ref ref="STDOUT"/>-->
     <!--</logger>-->
 

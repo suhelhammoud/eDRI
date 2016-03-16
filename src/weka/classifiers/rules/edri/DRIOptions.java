@@ -1,22 +1,20 @@
-package weka.classifiers.rules;
+package weka.classifiers.rules.edri;
 
 import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.LoggerContext;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import weka.classifiers.rules.eDRI;
 import weka.core.*;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Vector;
 
 /**
  * Created by suhel on 11/03/16.
  */
-public class PrismOptions implements OptionHandler, Serializable{
+public class DRIOptions implements OptionHandler, Serializable{
 
-    static final long serialVersionUID = 1310258880025902107L;
+    static final long serialVersionUID = 1310258885025902107L;
 
     private boolean addDefaultRule = false;
 
@@ -28,7 +26,7 @@ public class PrismOptions implements OptionHandler, Serializable{
         this.addDefaultRule = addDefaultRule;
     }
 
-    //    static Logger logger = LoggerFactory.getLogger(PrismOptions.class);
+    //    static Logger logger = LoggerFactory.getLogger(DRIOptions.class);
 
 
     enum LEVELS {off, trace, debug, info, warn, error, fatal;
@@ -43,9 +41,24 @@ public class PrismOptions implements OptionHandler, Serializable{
     }
 
     protected boolean useOldPrism = true;
-    protected String m_debugLevel= "DEBUG";
-    protected int minSupport = 1;
-    protected double minConfidence = 0.8;
+    protected String m_debugLevel= "info";
+
+    public String debugLevel() {
+        return m_debugLevel;
+    }
+    protected double minSupport = 0.02;
+
+    protected double minConfidence = 0.0;
+
+    protected int maxNumInstances = 0;
+
+    public int getMaxNumInstances() {
+        return maxNumInstances;
+    }
+
+    public void setMaxNumInstances(int maxNumInstances) {
+        this.maxNumInstances = maxNumInstances;
+    }
 
     public SelectedTag getDebugLevel() {
         return new SelectedTag(m_debugLevel, LEVELS.toTags());
@@ -60,11 +73,11 @@ public class PrismOptions implements OptionHandler, Serializable{
         this.useOldPrism = useOldPrism;
     }
 
-    public int getMinSupport() {
+    public double getMinSupport() {
         return minSupport;
     }
 
-    public void setMinSupport(int minSupport) {
+    public void setMinSupport(double minSupport) {
         this.minSupport = minSupport;
     }
 
@@ -88,6 +101,7 @@ public class PrismOptions implements OptionHandler, Serializable{
         result.addElement(new Option("Old Prism algorithm", "P", 0, "-P"));
         result.addElement(new Option("Add Default Rule?", "R", 0, "-R"));
         result.addElement(new Option("minimum support", "S", 1, "-S <lower bound for minimum support >"));
+//        result.addElement(new Option("minimum support", "s", 1, "-s <lower bound for minimum support >"));
         result.addElement(new Option("minimum confidence", "C", 1, "-C <minimum confidence of a rule >"));
         result.addElement(new Option("descritption", "D", 1, "-D < off | trace | debug | info | warn | error | fatal >"));
         return result.elements();
@@ -102,7 +116,7 @@ public class PrismOptions implements OptionHandler, Serializable{
         String sConfidence = Utils.getOption('C', options);
         minConfidence = Double.parseDouble(sConfidence);
         String sSupport = Utils.getOption('S', options);
-        minSupport = Integer.parseInt(sSupport);
+        minSupport = Double.parseDouble(sSupport);
 
         useOldPrism = Utils.getFlag('P', options);
         addDefaultRule = Utils.getFlag('R', options);
@@ -144,19 +158,9 @@ public class PrismOptions implements OptionHandler, Serializable{
     }
 
     public static void changeLogLevelRunTime(String logLevel) {
-//        Logger lg = (Logger) LoggerFactory.getLogger(PrismMod01.class);
-        ((ch.qos.logback.classic.Logger)LoggerFactory.getLogger(PrismMod01.class)) .setLevel(Level.toLevel(logLevel));
+//        Logger lg = (Logger) LoggerFactory.getLogger(eDRI.class);
+        ((ch.qos.logback.classic.Logger)LoggerFactory.getLogger(eDRI.class)) .setLevel(Level.toLevel(logLevel));
 
     }
-        public static void main(String[] args) throws Exception {
 
-        PrismOptions opt = new PrismOptions();
-        System.out.println(((Option)opt.listOptions().nextElement()).synopsis());
-
-        String s = "-D fatal";
-        opt.setOptions(s.split("\\s+"));
-
-        String[] srtOpt = opt.getOptions();
-        System.out.println(Arrays.toString(srtOpt));
-    }
 }

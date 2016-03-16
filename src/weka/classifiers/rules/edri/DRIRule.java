@@ -1,4 +1,4 @@
-package weka.classifiers.rules;
+package weka.classifiers.rules.edri;
 
 import weka.core.Instance;
 import weka.core.Instances;
@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Class for storing a PRISM ruleset, i.e. a list of rules
  */
-public class PrismRule
+public class DRIRule
         implements Serializable, RevisionHandler {
 
     static AtomicInteger ID = new AtomicInteger();
@@ -21,7 +21,7 @@ public class PrismRule
     /**
      * for serialization
      */
-    static final long serialVersionUID = 4248784350656508583L;
+    static final long serialVersionUID = 424878435065650583L;
 
     /**
      * The classification
@@ -36,18 +36,15 @@ public class PrismRule
     /**
      * First test of this rule
      */
-    Test m_test;
+    public DRITest m_text;
 
     /**
      * Number of errors made by this rule (will end up 0)
      */
-    int m_errors;
+    public int m_errors;
 
-    int m_covers;
-    int m_correct;
-
-    /** The next rule in the list */
-//    PrismRule m_next;
+    public int m_covers;
+    public int m_correct;
 
     /**
      * Constructor that takes instances and the classification.
@@ -56,12 +53,12 @@ public class PrismRule
      * @param cl   the class
      * @throws Exception if something goes wrong
      */
-    public PrismRule(Instances data, int cl)  {
+    public DRIRule(Instances data, int cl)  {
         this.id = ID.incrementAndGet();
 
 //        m_instances = data;//TODO no need to assign data to m_instances
         m_classification = cl;
-        m_test = null;
+        m_text = null;
 //        m_next = null;
 
         m_instances = new Instances(data, 0);
@@ -91,44 +88,28 @@ public class PrismRule
      */
     public int resultRule(Instance inst) {
 
-        if (m_test == null || m_test.satisfies(inst)) {
+        if (m_text == null || m_text.satisfies(inst)) {
             return m_classification;
         } else {
             return -1;
         }
     }
 
-    public void addTest(Test newTest) {
-        if(m_test == null){
-            m_test = newTest;
+    public void addTest(DRITest newDRITest) {
+        if(m_text == null){
+            m_text = newDRITest;
             return;
         }
 
-        Test tempTest = m_test;
-        while (tempTest.m_next != null)
-            tempTest = tempTest.m_next;
-        tempTest.m_next = newTest;
+        DRITest tempDRITest = m_text;
+        while (tempDRITest.m_next != null)
+            tempDRITest = tempDRITest.m_next;
+        tempDRITest.m_next = newDRITest;
     }
 
-//    /**
-//     * Returns the result assigned by these rules to a given instance.
-//     *
-//     * @param inst the instance to be classified
-//     * @return the classification
-//     */
-//    public int resultRules(Instance inst) {
-//
-//        if (resultRule(inst) != -1) {
-//            return m_classification;
-//        } else if (m_next != null) {
-//            return m_next.resultRules(inst);
-//        } else {
-//            return -1;
-//        }
-//    }
 
-    public static int classifyInst(Instance instance, List<PrismRule> rules) {
-        for (PrismRule rule : rules) {
+    public static int classifyInst(Instance instance, List<DRIRule> rules) {
+        for (DRIRule rule : rules) {
             if (rule.resultRule(instance) != -1) {
                 return rule.m_classification;
             }
@@ -182,27 +163,32 @@ public class PrismRule
         String label = m_instances.attribute(classIndex).value(m_classification);
         sb.append("cls=" + label + ", inst = " + m_instances.numInstances() + ",");
         sb.append("err = " + m_errors);
-        if (m_test != null)
-            sb.append("<" + m_test.toStr(m_instances) + ">");
+        if (m_text != null)
+            sb.append("<" + m_text.toStr(m_instances) + ">");
         sb.append("]");
 
         return sb.toString();
     }
 
-    ;
+
 
     /**
      * Prints the set of rules.
      *
      * @return a description of the rules as a string
      */
-    public String toString() {
+    public String toString(int maxDigits) {
+        int digits = (int) (Math.ceil(Math.log10(maxDigits)));
 
+        String pattern = "( "+ EDRIUtils.formatIntPattern(digits)+", %.2f ) ";
+//        System.out.println(pattern);
         try {
             StringBuffer text = new StringBuffer();
-            if (m_test != null) {
-                text.append("If ");
-                for (Test t = m_test; t != null; t = t.m_next) {
+
+            if (m_text != null) {
+                text.append(String.format(pattern, m_correct, getConfidence()));
+                text.append("If (");
+                for (DRITest t = m_text; t != null; t = t.m_next) {
                     if (t.m_attr == -1) {
                         text.append("?");
                     } else {
@@ -210,17 +196,15 @@ public class PrismRule
                                 m_instances.attribute(t.m_attr).value(t.m_val));
                     }
                     if (t.m_next != null) {
-                        text.append("\n   and ");
+                        text.append(" , ");
                     }
                 }
-                text.append(" then ");
+                text.append(") then ");
             }
-            text.append(m_instances.classAttribute().value(m_classification) + "\n");
-//            if (m_next != null) {
-//                text.append(m_next.toString());
-//            }
+            text.append(m_instances.classAttribute().value(m_classification) );
             return text.toString();
         } catch (Exception e) {
+            e.printStackTrace();
             return "Can't print Prism classifier!";
         }
     }
@@ -244,5 +228,19 @@ public class PrismRule
 
     private double getConfidence() {
         return (double)m_correct/(double)m_covers;
+    }
+
+    public double getLenghtWeighted() {
+        return this.m_correct * this.getLength();
+    }
+
+    private int getLength() {
+        int result = 0;
+        DRITest test = m_text;
+        while( test  != null){
+            result++;
+            test = test.m_next;
+        }
+        return result;
     }
 }
