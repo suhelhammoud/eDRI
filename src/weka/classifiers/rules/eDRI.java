@@ -43,7 +43,7 @@ import java.util.*;
  * <br/>
  * For more information, see <br/>
  * <br/>
- * J. F. Thabatah, S. Hammoud
+ * J. F. Thabtah, S. Hammoud
  * <p>
  * <!-- globalinfo-end -->
  * <p>
@@ -51,7 +51,7 @@ import java.util.*;
  * BibTeX:
  * <pre>
  * &#64;article{ref here,
- *    author = {F. Thabatah},
+ *    author = {F. Thabtah},
  *    journal = { Journal Ref. here},
  *    number = {number},
  *    pages = {pagestart - pageend},
@@ -130,7 +130,7 @@ public class eDRI
         TechnicalInformation result;
 
         result = new TechnicalInformation(Type.ARTICLE);
-        result.setValue(Field.AUTHOR, "F. Thabatah, S. Hammoud");
+        result.setValue(Field.AUTHOR, "F. Thabtah, S. Hammoud");
         result.setValue(Field.YEAR, "2016");
         result.setValue(Field.TITLE, "eDRI: An algorithm for inducing modular rules");
         result.setValue(Field.JOURNAL, "Journal");
@@ -246,6 +246,10 @@ public class eDRI
         return result;
     }
 
+    public void buildClassifierSuhel(Instances data, int minFreqs, double minConfidence) throws Exception {
+
+    }
+
     /**
      * After running, m_rules will be refilled with new learned rules, oPtion will holds values of:
      * maxNumInstances: data.numInstances
@@ -354,15 +358,6 @@ public class eDRI
     public void buildClassifierPrism(Instances data) throws Exception {
         List<DRIRule> rules = new ArrayList<>(data.numAttributes());
 
-//        int cl; // possible value of theClass
-//        Instances E = null, ruleE;
-//        DRIRule rule = null;
-
-//        DRITest DRITest = null;
-//        DRITest oldDRITest = null;
-//        int bestCorrect, bestCovers, attUsed;
-//        Enumeration enumAtt;
-
         // can classifier handle the data?
         getCapabilities().testWithFail(data);
 
@@ -393,22 +388,25 @@ public class eDRI
     }
 
 
+    private long getScannedInstances() {
+        long scanned = 0;
+        for (DRIRule rule : m_rules) {
+            scanned += rule.getScannedInstances();
+        }
+        return scanned;
+    }
+
+    ;
+
     private Pair<DRIRule, Instances> ruleInstancesEDRI(int cl, Instances e, int minFreqs, double minConfidence) throws Exception {
-//        Instances data = ;
-//        List<DRIRule> rules = ;
+
         if (e.numInstances() < minFreqs) {
             logger.trace("remaining instances = {} < {}",
                     e.numInstances(), minFreqs);
             return null;
         }
         Attribute classAtt = e.attribute(e.classIndex());
-//        DRIRule rule;
-//        Instances ruleE;
-//        DRITest driTest;
-//        int attUsed;
-//        int bestCovers;
-//        int bestCorrect;
-//        Enumeration enumAtt;
+
         logger.trace("\tE contains {} class\n", classAtt.value(cl));
         DRIRule rule = new DRIRule(e, cl);
         rule.updateAndGetNotCovered(e);
@@ -446,6 +444,8 @@ public class eDRI
                 // ... calculate the counts for this class
                 Enumeration enu = ruleE.enumerateInstances();
                 while (enu.hasMoreElements()) {
+                    rule.increaseScannedInstances();
+
                     Instance instance = (Instance) enu.nextElement();
                     covers[(int) instance.value(attr)]++;
                     if ((int) instance.classValue() == cl) {
@@ -536,7 +536,7 @@ public class eDRI
         logger.trace("\truleE {}", ruleE.numInstances());
         while (rule.m_errors != 0) { // until the rule is perfect
             DRITest driTest = new DRITest(); // make a new DRITest
-            int bestCorrect =0, bestCovers = 0, attUsed = 0;
+            int bestCorrect = 0, bestCovers = 0, attUsed = 0;
 
             // for every attribute not mentioned in the rule
             Enumeration enumAtt = ruleE.enumerateAttributes();
@@ -561,6 +561,7 @@ public class eDRI
                 // ... calculate the counts for this class
                 Enumeration enu = ruleE.enumerateInstances();
                 while (enu.hasMoreElements()) {
+                    rule.increaseScannedInstances();
                     Instance instance = (Instance) enu.nextElement();
                     covers[(int) instance.value(attr)]++;
                     if ((int) instance.classValue() == cl) {
@@ -675,11 +676,15 @@ public class eDRI
         sb.append("\nPrism rules ( frequency, confidence ) \n----------\n");
         for (int i = 0; i < m_rules.size(); i++) {
             DRIRule rule = m_rules.get(i);
-            sb.append(String.format(intPattern + " - ", (i+1) ) + rule.toString(maxDigits) + "\n");
+            sb.append(String.format(intPattern + " - ", (i + 1)) + rule.toString(maxDigits) + "\n");
         }
 
         sb.append(String.format("Avg. Weighted Rule Length = %2.2f", getAvgWeightedRuleLength(m_rules)) + "\n");
         sb.append(String.format("Avg. Rule Length = %2.2f", getAvgRuleLength(m_rules)) + "\n");
+
+        long scannedInstances = getScannedInstances();
+        double scannedInstancesPercent = (double)scannedInstances/(double)pOptions.getMaxNumInstances();
+        sb.append(String.format("Instances scanned to find all rules = %,d  (%,3.2f %%) \n" , scannedInstances, scannedInstancesPercent));
         return sb.toString();
     }
 
@@ -692,6 +697,7 @@ public class eDRI
         }
         return result / (double) pOptions.getMaxNumInstances();
     }
+
     private double getAvgRuleLength(List<DRIRule> rules) {
         double result = 0;
         for (DRIRule rule : rules) {
@@ -699,7 +705,6 @@ public class eDRI
         }
         return result / (double) rules.size();
     }
-
 
 
     /**

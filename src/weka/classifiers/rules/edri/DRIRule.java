@@ -46,13 +46,28 @@ public class DRIRule
     public int m_covers;
     public int m_correct;
 
-    /**
-     * Constructor that takes instances and the classification.
-     *
-     * @param data the instances
-     * @param cl   the class
-     * @throws Exception if something goes wrong
-     */
+    private long scannedInstances = 0;
+
+    public long increaseScannedInstances(int a) {
+        scannedInstances += a;
+        return scannedInstances;
+    }
+    public long increaseScannedInstances() {
+        scannedInstances++;
+        return scannedInstances;
+    }
+
+    public long getScannedInstances() {
+        return scannedInstances;
+    }
+
+        /**
+         * Constructor that takes instances and the classification.
+         *
+         * @param data the instances
+         * @param cl   the class
+         * @throws Exception if something goes wrong
+         */
     public DRIRule(Instances data, int cl)  {
         this.id = ID.incrementAndGet();
 
@@ -70,6 +85,7 @@ public class DRIRule
         //count not covered number
         Enumeration enu = data.enumerateInstances();
         while (enu.hasMoreElements()) {
+            scannedInstances++;
             if ((int) ((Instance) enu.nextElement()).classValue() == m_classification) {
                 m_correct++;
             } else {
@@ -128,6 +144,7 @@ public class DRIRule
         Instances result = new Instances(data, data.numInstances());
         Enumeration enu = data.enumerateInstances();
         while (enu.hasMoreElements()) {
+            scannedInstances++;
             Instance i = (Instance) enu.nextElement();
             if (resultRule(i) != -1) {
                 result.add(i);
@@ -148,6 +165,7 @@ public class DRIRule
         Instances r = new Instances(data, data.numInstances());
         Enumeration enu = data.enumerateInstances();
         while (enu.hasMoreElements()) {
+            scannedInstances++;
             Instance i = (Instance) enu.nextElement();
             if (resultRule(i) == -1) {
                 r.add(i);

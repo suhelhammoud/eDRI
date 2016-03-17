@@ -9,8 +9,10 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 
 /**
  * Created by suhel on 12/03/16.
@@ -43,7 +45,7 @@ public class EDRIUtils {
         return result;
     }
 
-    ;
+
 
     //Class should be the last attribute
     public static int[][] itemsLabelOfAttr(Instances data, int attIndex) {
