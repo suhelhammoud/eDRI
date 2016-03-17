@@ -74,5 +74,10 @@ public class DRITest
         return  sb.toString();
     };
 
+    public static void main(String[] args) {
+        String p = EDRIUtils.formatIntPattern(300);
+        System.out.printf("p");
+        System.out.printf(String.format(p, 4));
+    }
 
 }

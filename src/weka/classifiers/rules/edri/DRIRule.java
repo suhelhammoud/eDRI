@@ -178,9 +178,8 @@ public class DRIRule
      * @return a description of the rules as a string
      */
     public String toString(int maxDigits) {
-        int digits = (int) (Math.ceil(Math.log10(maxDigits)));
 
-        String pattern = "( "+ EDRIUtils.formatIntPattern(digits)+", %.2f ) ";
+        String pattern = "( "+ EDRIUtils.formatIntPattern(maxDigits)+", %.2f ) ";
 //        System.out.println(pattern);
         try {
             StringBuffer text = new StringBuffer();
@@ -234,7 +233,7 @@ public class DRIRule
         return this.m_correct * this.getLength();
     }
 
-    private int getLength() {
+    public int getLength() {
         int result = 0;
         DRITest test = m_text;
         while( test  != null){

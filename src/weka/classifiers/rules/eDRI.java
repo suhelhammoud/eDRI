@@ -258,14 +258,6 @@ public class eDRI
     public void buildClassifierEDRI(Instances data, int minFreqs, double minConfidence) throws Exception {
 
         List<DRIRule> rules = new ArrayList<>(data.numAttributes());
-        int cl; // possible value of theClass
-        Instances E = null, ruleE;
-        DRIRule rule = null;
-
-        DRITest DRITest = null;
-        DRITest oldDRITest = null;
-        int bestCorrect, bestCovers, attUsed;
-        Enumeration enumAtt;
 
         // can classifier handle the data?
         getCapabilities().testWithFail(data);
@@ -273,8 +265,9 @@ public class eDRI
         // remove instances with missing class
         data = new Instances(data);//defensive copy of the data
         data.deleteWithMissingClass();
-        for (cl = 0; cl < data.numClasses(); cl++) { // for each class cl
-            Attribute classAtt = data.attribute(data.classIndex());
+        Attribute classAtt = data.attribute(data.classIndex());
+        Instances E = null;
+        for (int cl = 0; cl < data.numClasses(); cl++) { // for each class cl
 
             logger.trace("for class = {}", classAtt.value(cl));
             logger.trace("reset E from {} to {} instances",
@@ -361,14 +354,14 @@ public class eDRI
     public void buildClassifierPrism(Instances data) throws Exception {
         List<DRIRule> rules = new ArrayList<>(data.numAttributes());
 
-        int cl; // possible value of theClass
-        Instances E = null, ruleE;
-        DRIRule rule = null;
+//        int cl; // possible value of theClass
+//        Instances E = null, ruleE;
+//        DRIRule rule = null;
 
-        DRITest DRITest = null;
-        DRITest oldDRITest = null;
-        int bestCorrect, bestCovers, attUsed;
-        Enumeration enumAtt;
+//        DRITest DRITest = null;
+//        DRITest oldDRITest = null;
+//        int bestCorrect, bestCovers, attUsed;
+//        Enumeration enumAtt;
 
         // can classifier handle the data?
         getCapabilities().testWithFail(data);
@@ -376,16 +369,16 @@ public class eDRI
         // remove instances with missing class
         data = new Instances(data);
         data.deleteWithMissingClass();
-        for (cl = 0; cl < data.numClasses(); cl++) { // for each class cl
-            Attribute classAtt = data.attribute(data.classIndex());
+        Attribute classAtt = data.attribute(data.classIndex());
+        for (int cl = 0; cl < data.numClasses(); cl++) { // for each class cl
 
             logger.trace("for class = {}", classAtt.value(cl));
             freqsLogger.trace("for class = {}", classAtt.value(cl));
 
+            Instances E = data; // initialize E to the instance set
             logger.trace("reset E from {} to {} instances",
                     E == null ? "null" : E.numInstances(),
                     data.numInstances());
-            E = data; // initialize E to the instance set
 
             while (contains(E, cl)) { // while E contains examples in class cl
                 Pair<DRIRule, Instances> result = ruleInstancesPrism(cl, E);
@@ -409,28 +402,29 @@ public class eDRI
             return null;
         }
         Attribute classAtt = e.attribute(e.classIndex());
-        DRIRule rule;
-        Instances ruleE;
-        DRITest driTest;
-        int attUsed;
-        int bestCovers;
-        int bestCorrect;
-        Enumeration enumAtt;
+//        DRIRule rule;
+//        Instances ruleE;
+//        DRITest driTest;
+//        int attUsed;
+//        int bestCovers;
+//        int bestCorrect;
+//        Enumeration enumAtt;
         logger.trace("\tE contains {} class\n", classAtt.value(cl));
-        rule = new DRIRule(e, cl);
+        DRIRule rule = new DRIRule(e, cl);
         rule.updateAndGetNotCovered(e);
 
         logger.trace("\tNew rule {}", rule.toStr());
-        ruleE = e; // examples covered by this rule
+        Instances ruleE = e; // examples covered by this rule
         logger.trace("\tstart ruleE  with {} instances", ruleE.numInstances());
 
         while (rule.m_errors > 0 && rule.m_correct >= minFreqs) { // until the rule is perfect
             logger.trace("\t\tRule {} is not perfect", rule.id);
-            driTest = new DRITest(); // make a new DRITest
-            bestCorrect = bestCovers = attUsed = 0;
+            DRITest driTest = new DRITest(); // make a new DRITest
+//            int bestCorrect = 0, bestCovers = 0,
+            int attUsed = 0;
 
             // for every attribute not mentioned in the rule
-            enumAtt = ruleE.enumerateAttributes();
+            Enumeration enumAtt = ruleE.enumerateAttributes();
             while (enumAtt.hasMoreElements()) {
                 Attribute attr = (Attribute) enumAtt.nextElement();
                 logger.trace("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
@@ -466,8 +460,10 @@ public class eDRI
 
                 logger.trace("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
 
-                int notCovered = -1;
+//                int notCovered = -1;
                 // ... for each value of this attribute, see if this DRITest is better
+                int bestCorrect = 0, bestCovers = 0;
+
                 for (int val = 0; val < M; val++) {
 //
                     if (correct[val] < minFreqs) {
@@ -506,6 +502,7 @@ public class eDRI
             freqsLogger.trace("add item {}, to rule {}", driTest.toStr(e), rule.toStr());
             rule.addTest(driTest);
 
+
             ruleE = rule.coveredBy(ruleE);
             logger.trace("\t\t\tR_{} coveredBy {}", rule.id, ruleE.numInstances());
             if (attUsed == (e.numAttributes() - 1)) { // Used all attributes.
@@ -524,25 +521,25 @@ public class eDRI
 
     private Pair<DRIRule, Instances> ruleInstancesPrism(int cl, Instances e) throws Exception {
         Attribute classAtt = e.attribute(e.classIndex());
-        DRIRule rule;
-        Instances ruleE;
-        DRITest DRITest;
-        int attUsed;
-        int bestCovers;
-        int bestCorrect;
-        Enumeration enumAtt;
+//        DRIRule rule;
+//        Instances ruleE;
+//        DRITest driTest;
+//        int attUsed;
+//        int bestCovers;
+//        int bestCorrect;
+//        Enumeration enumAtt;
         logger.trace("\tE contains {} class\n", classAtt.value(cl));
-        rule = new DRIRule(e, cl);
+        DRIRule rule = new DRIRule(e, cl);
         rule.updateAndGetNotCovered(e);
         logger.trace("\tNew rule {}", rule.toStr());
-        ruleE = e; // examples covered by this rule
+        Instances ruleE = e; // examples covered by this rule
         logger.trace("\truleE {}", ruleE.numInstances());
         while (rule.m_errors != 0) { // until the rule is perfect
-            DRITest = new DRITest(); // make a new DRITest
-            bestCorrect = bestCovers = attUsed = 0;
+            DRITest driTest = new DRITest(); // make a new DRITest
+            int bestCorrect =0, bestCovers = 0, attUsed = 0;
 
             // for every attribute not mentioned in the rule
-            enumAtt = ruleE.enumerateAttributes();
+            Enumeration enumAtt = ruleE.enumerateAttributes();
             while (enumAtt.hasMoreElements()) {
                 Attribute attr = (Attribute) enumAtt.nextElement();
                 logger.trace("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
@@ -584,31 +581,31 @@ public class eDRI
                     int diff = correct[val] * bestCovers - bestCorrect * covers[val];
 
                     // this is a ratio DRITest, correct/covers vs best correct/covers
-                    if (DRITest.m_attr == -1
+                    if (driTest.m_attr == -1
                             || diff > 0 || (diff == 0 && correct[val] > bestCorrect)) {
 
                         // update the rule to use this DRITest
                         bestCorrect = correct[val];
                         bestCovers = covers[val];
-                        DRITest.m_attr = attr.index();
-                        DRITest.m_val = val;
+                        driTest.m_attr = attr.index();
+                        driTest.m_val = val;
                         rule.m_errors = bestCovers - bestCorrect;
                         rule.m_covers = bestCovers;
                         rule.m_correct = bestCorrect;
                     }
                 }
             }
-            if (DRITest.m_attr == -1) { // Couldn't find any sensible DRITest
+            if (driTest.m_attr == -1) { // Couldn't find any sensible DRITest
                 logger.trace("\t\t\tCouldn't find any sensible DRITest");
                 break;
             }
             logger.trace("\t\t\tAdd DRITest {} to rule {}",
-                    DRITest == null ? "null" : DRITest.toStr(e),
+                    driTest == null ? "null" : driTest.toStr(e),
                     rule == null ? "null" : rule.toStr());
 
 //                    oldTest = addTest(rule, oldTest, DRITest);
-            freqsLogger.trace("add item {}, to rule {}", DRITest.toStr(e), rule.toStr());
-            rule.addTest(DRITest);
+            freqsLogger.trace("add item {}, to rule {}", driTest.toStr(e), rule.toStr());
+            rule.addTest(driTest);
 
             ruleE = rule.coveredBy(ruleE);
             logger.trace("\t\t\tR_{} coveredBy {}", rule.id, ruleE.numInstances());
@@ -678,21 +675,32 @@ public class eDRI
         sb.append("\nPrism rules ( frequency, confidence ) \n----------\n");
         for (int i = 0; i < m_rules.size(); i++) {
             DRIRule rule = m_rules.get(i);
-            sb.append(String.format(intPattern + "- ", i) + rule.toString(maxDigits) + "\n");
+            sb.append(String.format(intPattern + " - ", (i+1) ) + rule.toString(maxDigits) + "\n");
         }
 
+        sb.append(String.format("Avg. Weighted Rule Length = %2.2f", getAvgWeightedRuleLength(m_rules)) + "\n");
         sb.append(String.format("Avg. Rule Length = %2.2f", getAvgRuleLength(m_rules)) + "\n");
         return sb.toString();
     }
 
     //all based of all number of instances, remaining default rule length = 0
-    private double getAvgRuleLength(List<DRIRule> rules) {
+    private double getAvgWeightedRuleLength(List<DRIRule> rules) {
         double result = 0;
         for (DRIRule rule : rules) {
+            //TODO accumulate rule rule.m_correct instead of final maxNumInstances
             result += rule.getLenghtWeighted();
         }
         return result / (double) pOptions.getMaxNumInstances();
     }
+    private double getAvgRuleLength(List<DRIRule> rules) {
+        double result = 0;
+        for (DRIRule rule : rules) {
+            result += rule.getLength();
+        }
+        return result / (double) rules.size();
+    }
+
+
 
     /**
      * Returns the revision string.
