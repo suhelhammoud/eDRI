@@ -33,10 +33,10 @@ public class DRITest
     public DRITest m_next = null;
 
     /**
-     * Returns whether a given instance satisfies this test.
+     * Returns whether a given instance classify this test.
      *
      * @param inst the instance to be tested
-     * @return true if the instance satisfies the test
+     * @return true if the instance classify the test
      */
     boolean satisfies(Instance inst) {
 

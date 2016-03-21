@@ -82,7 +82,7 @@ public class DRIRule
 
     public int updateAndGetNotCovered(Instances data) {
         m_errors = 0;
-        //count not covered number
+        //countStep not covered number
         Enumeration enu = data.enumerateInstances();
         while (enu.hasMoreElements()) {
             scannedInstances++;

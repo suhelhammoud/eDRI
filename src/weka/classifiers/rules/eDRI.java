@@ -521,13 +521,6 @@ public class eDRI
 
     private Pair<DRIRule, Instances> ruleInstancesPrism(int cl, Instances e) throws Exception {
         Attribute classAtt = e.attribute(e.classIndex());
-//        DRIRule rule;
-//        Instances ruleE;
-//        DRITest driTest;
-//        int attUsed;
-//        int bestCovers;
-//        int bestCorrect;
-//        Enumeration enumAtt;
         logger.trace("\tE contains {} class\n", classAtt.value(cl));
         DRIRule rule = new DRIRule(e, cl);
         rule.updateAndGetNotCovered(e);
@@ -683,8 +676,10 @@ public class eDRI
         sb.append(String.format("Avg. Rule Length = %2.2f", getAvgRuleLength(m_rules)) + "\n");
 
         long scannedInstances = getScannedInstances();
-        double scannedInstancesPercent = (double)scannedInstances/(double)pOptions.getMaxNumInstances();
-        sb.append(String.format("Instances scanned to find all rules = %,d  (%,3.2f %%) \n" , scannedInstances, scannedInstancesPercent));
+        int numInstances = pOptions.getMaxNumInstances();
+        double scannedInstancesPercent = (double)scannedInstances/(double)numInstances;
+        sb.append(String.format("Num of Instances of training dataset = %,d \n", numInstances));
+        sb.append(String.format("Instances scanned to find all rules = %,d  (= %,d * %,3.2f ) \n" , scannedInstances, numInstances, scannedInstancesPercent));
         return sb.toString();
     }
 
