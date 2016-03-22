@@ -71,22 +71,30 @@ public class IRule {
      * @param lineData
      * @return Set of not covered lines
      */
-    public Set<int[]> removeAndGetCovered(Set<int[]> lineData, int resultSize) {
+    public Set<int[]> splitAndGetCovered(Set<int[]> lineData, int resultSize) {
+        //TODO the remove all cover, correct, errors increments from here;
         Set<int[]> coveredLines = new HashSet<>(resultSize);
         resetCounters();
-
-
+        final int lblInLine = lineData.iterator().next().length-1;
+        covers = resultSize;
         for (Iterator<int[]> iter = lineData.iterator(); iter.hasNext(); ) {
             int[] line = iter.next();
             int lbl = classify(line);
-            if(lbl == EMPTY){ //rule does not cover line
-                coveredLines.add(line);
-                iter.remove();
-            }else if(lbl == line[label]){
+            if(lbl == EMPTY) continue; //not Classified keep it
+
+            covers++;
+
+            if( label == line[lblInLine])
                 correct++;
-            }else errors ++;
+            else
+                errors++;
+
+            coveredLines.add(line);
+            iter.remove();
         }
 
+
+        assert coveredLines.size() == resultSize;
 
         return coveredLines;
     }
@@ -188,6 +196,10 @@ public class IRule {
                 .add("covers", covers)
                 .toString();
 
+    }
+
+    public static void main(String[] args) {
+        System.out.println("done");
     }
 }
 

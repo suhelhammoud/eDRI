@@ -2,6 +2,7 @@ package weka.classifiers.rules.edri;
 
 //import com.google.common.base.Joiner;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -37,7 +38,7 @@ public class DRIData {
      */
     final public int[] iattrs;
     final public int numLabels;
-
+    final public int[] labelsCount;
 //    /**
 //     * Holds the values of items for each row instance
 //     */
@@ -48,6 +49,7 @@ public class DRIData {
         this.iattrs = new int[data.numAttributes()];
         this.labelIndex = iattrs.length - 1;
         this.numLabels = data.attribute(labelIndex).numValues();
+        this.labelsCount = new int[numLabels];
         mapIAttrs(data);
 
 //        this.labelAtt = new int[data.attribute(labelIndex).numValues()];
@@ -62,11 +64,10 @@ public class DRIData {
         }
     }
 
-    public static Set<int[]> mapIdataAndLabels(Instances data) {
+    public Set<int[]> mapIdataAndLabels(Instances data) {
         Set<int[]> lineData = new HashSet<>(data.numInstances());
 
         int numAttrs = data.numAttributes();
-
         for (int i = 0; i < data.numInstances(); i++) {
             Instance instance = data.instance(i);
             final int[] row = new int[numAttrs];
@@ -74,6 +75,7 @@ public class DRIData {
             for (int att = 0; att < row.length; att++) {
                 row[att] = (int) instance.value(att);
             }
+            labelsCount[row[labelIndex]]++;
             lineData.add(row);
         }
         return lineData;
@@ -107,13 +109,13 @@ public class DRIData {
     }
 
 
-    public static int[][][] countStep(DRIData driData, Set<int[]> lineData, int[] avAtts) {
+    public static int[][][] countStep(DRIData dd, Set<int[]> lineData, int[] avAtts) {
 
         //create array of attributes, withoud the class name;
-        int[][][] result = new int[driData.iattrs.length][][];
+        int[][][] result = new int[dd.iattrs.length][][];
 
         for (int attIndex : avAtts) {
-            result[attIndex] = new int[driData.iattrs[attIndex]][driData.numLabels];
+            result[attIndex] = new int[dd.iattrs[attIndex]][dd.numLabels];
         }
         for (int i = 0; i < result.length; i++) {
             if (result[i] == null) result[i] = new int[0][0];
@@ -121,124 +123,157 @@ public class DRIData {
 
         //filling with values
         for (int[] row : lineData) {
-            int cls = row[driData.labelIndex];
+            int cls = row[dd.labelIndex];
+
             for (int a : avAtts)
                 result[a][row[a]][cls]++;
         }
         return result;
     }
 
-    public static int[][][] countStep(DRIData driData, Set<int[]> lineData) {
+//    public static int[][][] countStep(DRIData driData, Set<int[]> lineData) {
+//
+//        //create array of attributes, withoud the class name;
+//        int[][][] result = new int[driData.iattrs.length][][];
+//
+//        //init counters
+//        for (int attIndex = 0; attIndex < result.length; attIndex++) {
+//            //create array of elements for each attribute
+//            result[attIndex] = new int[driData.iattrs[attIndex]][driData.numLabels];
+//        }
+//
+//        //filling with values
+//        for (int[] row : lineData) {
+//            int cls = row[driData.labelIndex];
+//            for (int a = 0; a < row.length; a++) {
+//                result[a][row[a]][cls]++;
+//            }
+//        }
+//        return result;
+//    }
 
-        //create array of attributes, withoud the class name;
-        int[][][] result = new int[driData.iattrs.length][][];
 
-        //init counters
-        for (int attIndex = 0; attIndex < result.length; attIndex++) {
-            //create array of elements for each attribute
-            result[attIndex] = new int[driData.iattrs[attIndex]][driData.numLabels];
+    public static Set<int[]> splitAndGetCovered(Set<int[]> lineData, IRule rule, int resultSize) {
+        Set<int[]> coveredLines = new HashSet<>(resultSize);
+        final int lblInLine = lineData.iterator().next().length - 1;
+        for (Iterator<int[]> iter = lineData.iterator(); iter.hasNext(); ) {
+            int[] line = iter.next();
+
+            if (rule.classify(line) == IRule.EMPTY)
+                continue; //not Classified keep it
+            coveredLines.add(line);
+            iter.remove();
         }
-
-        //filling with values
-        for (int[] row : lineData) {
-            int cls = row[driData.labelIndex];
-            for (int a = 0; a < row.length; a++) {
-                result[a][row[a]][cls]++;
-            }
-        }
-        return result;
+        assert coveredLines.size() == resultSize;
+        return coveredLines;
     }
 
-
     /**
-     *
-     * @param dd (with label index and iattrs length values
-     * @param lineData line data, pruned at the end to not covered instances
-     * @param label label index
+     * @param dd       (with label index and iattrs length values
+     * @param lineData line data, pruned at the end to NOT COVERED instances
+     * @param label    label index
      * @return
      */
-    public static LinesIRule calcStep(DRIData dd, Set<int[]> lineData, int label ) {
+    public static LinesIRule calcStep(DRIData dd, Set<int[]> lineData, final int label) {
 
         /** Start with all attributes*/
         Set<Integer> avAtts = new LinkedHashSet<>();
         for (int i = 0; i < dd.labelIndex; i++) avAtts.add(i);
 
-        logger.trace("Start with avAtts = {}", avAtts );
-        /** count the class counts for each element in each attributes*/
-        int[][][] count = countStep(dd, lineData, Ints.toArray(avAtts));
 
-        /** create MaxIndex instance either general or based on */
-        MaxIndex mi = label == MaxIndex.EMPTY ?
-                MaxIndex.of(count)
-                : MaxIndex.of(count, label) ;
-
-        logger.trace("maxIndex for step = {}", mi);
-        assert mi.getLabel() != MaxIndex.EMPTY;
+        IRule rule = new IRule(label);
 
 
-        IRule rule = new IRule(mi.getLabel());
+        Set<int[]> tmpLines = lineData;
+        Set<int[]> linesRemained = null;
+        Set<int[]> avoidedLines = new HashSet<>(lineData.size());
 
-        rule.addTest(mi.getAtt(), mi.getItem());
-        /** Done with max attributes element, remove it  */
-        avAtts.remove(mi.getAtt());
+       do {
 
-        Set<int[]> notCovered = rule.keepCoveredBy(lineData);
-        logger.trace("lines kept = {}, lines not coverd= {}", lineData.size(), notCovered.size());
-        logger.trace(" rule getErrors {}", rule.getErrors());
-        rule.updateWith(mi);//TODO check if remvoed
-        logger.trace(" rule getErrors after updates {}", rule.getErrors());
+            int[][][] stepCount = countStep(dd, tmpLines, Ints.toArray(avAtts));
+            MaxIndex mx = MaxIndex.of(stepCount, rule.label);
 
-        /** Keep looping while current set of lines not completed*/
-        while (rule.getErrors() > 0 || avAtts.size() == 0) {
-            /** count the class counts for remaining attributs */
-            int[][][] sepCount = countStep(dd, lineData, Ints.toArray(avAtts));
+            logger.trace("maxIndex for step = {}", mx);
+            assert mx.getLabel() != MaxIndex.EMPTY;
+            assert mx.getLabel() == label;
 
-            MaxIndex mx = MaxIndex.of(sepCount, rule.label);
-            if (mx.getLabel() == MaxIndex.EMPTY) {
-                logger.error("can't find sensible test on rule {}", rule.toString());
-                break;
-            }
 
             avAtts.remove(mx.getAtt());
-
             rule.addTest(mx.getAtt(), mx.getItem());
+            rule.updateWith(mx);
 
-            Set<int[]> remains = rule.keepCoveredBy(lineData);
-            //rule.updateWith(mx);//TODO check deleting updateWith
+            Set<int[]> coveredLines  = splitAndGetCovered(tmpLines,rule, mx.bestCover);
+           avoidedLines.addAll(tmpLines);
+           linesRemained = tmpLines;
+            logger.trace("tmpLines =\n{}", print(tmpLines));
+            logger.trace("coveredLines =\n{}", print(coveredLines));
 
-            notCovered.addAll(remains);
+            logger.trace("switch tmpLines of size= {}, into coveredLines of size= {}", tmpLines.size(), coveredLines.size());
+//            if (linesRemained == null) {
+//
+//            }
+            tmpLines = coveredLines;
 
-        }
+        }  while (rule.getErrors() > 0 && avAtts.size() > 0);
 
-         return new LinesIRule(rule, notCovered);
+        lineData.addAll(avoidedLines);
+        logger.trace("exit calc steps with final rule ={}",rule);
+        return new LinesIRule(rule, lineData);
     }
 
-    public static MaxIndex max(int[][][] count) {
-        MaxIndex mi = new MaxIndex();
-        for (int at = 0; at < count.length - 1; at++) {
-            for (int itm = 0; itm < count[at].length; itm++) {
-                mi.max(count[at][itm], at, itm);
+
+
+    public static List<IRule> buildClassifierPrism(DRIData dd, Set<int[]> lineData) {
+        List<IRule> rules = new ArrayList<>();
+
+        for (int cls = 0; cls < dd.numLabels; cls++) {
+            logger.trace("****************************************" +
+                    "\nfor class = {}", cls);
+            int clsCounter = dd.labelsCount[cls];
+            logger.trace("cls {} count = {}", cls, clsCounter);
+            Set<int[]> lines = new HashSet<>(lineData);//defensive copy
+
+//            for (int i = 0; i < 4; i++) {
+////            }
+            while (clsCounter > 0) {
+                LinesIRule lnrl = calcStep(dd, lines, cls);
+                logger.trace("rule {}", lnrl.rule);
+                logger.trace("remaining lines={}\n{}", lnrl.lines.size(),print(lnrl.lines));
+
+                lines = lnrl.lines;
+                clsCounter -= lnrl.rule.getCorrect();
+                logger.trace("took {} , remains {} instances",
+                        lnrl.rule.getCorrect(), clsCounter);
+                rules.add(lnrl.rule);
             }
         }
-        return mi;
-    }
 
+        return rules;
+    }
 
     public static void main(String[] args) throws IOException {
         logger.info("test logger");
 
-        String inFile = "/media/suhel/workspace/work/wekaprism/data/fadi.arff";
+//        String inFile = "/media/suhel/workspace/work/wekaprism/data/fadi.arff";
+        String inFile = "/media/suhel/workspace/work/wekaprism/data/cl.arff";
 
         Instances data = new Instances(EDRIUtils.readDataFile(inFile));
         System.out.println(data.numInstances());
         DRIData dd = new DRIData(data);
 
-        Set<int[]> lineLabel = mapIdataAndLabels(data);
-        Set<int[]> notCovered = new HashSet<>(lineLabel);
-        List<IRule> rules = new ArrayList<>();
+        Set<int[]> lineData = dd.mapIdataAndLabels(data);
+        logger.trace("original lines\n{}", print(lineData));
+        List<IRule> rules = buildClassifierPrism(dd, lineData);
+
+        logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));
+        if (true) {
+            return;
+        }
+        Set<int[]> notCovered = new HashSet<>(lineData);
+//        List<IRule> rules = new ArrayList<>();
         LinesIRule lnrl;
 
-        logger.trace("lineLabel {}", lineLabel.size());
+        logger.trace("lineLabel {}", lineData.size());
         logger.trace("not covered {}", notCovered.size());
 
         int label = 0;
@@ -269,8 +304,6 @@ public class DRIData {
         rules.add(lnrl.rule);
         notCovered.addAll(lnrl.lines);
         logger.trace("not covered size = {}", notCovered.size());
-
-
 
 
     }
