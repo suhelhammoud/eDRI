@@ -1,4 +1,4 @@
-package weka.classifiers.rules.edri;
+package weka.classifiers.rules.medri;
 
 import com.google.common.base.MoreObjects;
 
@@ -55,85 +55,43 @@ public class IRule {
         this.attValues = new int[0];
     }
 
-//    public IRule(MaxIndex mi) {
-//        this(mi.getLabel());
-//        this.correct = mi.getBestCorrect();
-//        this.covers = mi.getBestCover();
-//        this.errors = covers - correct;
+
+
+//    /**
+//     * Filter the lineData to keep only lines satisfies this rule
+//     * Reset correct, covers, and errors
+//     *
+//     * @param lineData
+//     * @return Set of not covered lines
+//     */
+//    public Set<int[]> keepCoveredBy(Set<int[]> lineData) {
+//        return keepCoveredBy(lineData, this);
+//    }
+//
+//    public static Set<int[]> keepCoveredBy(Set<int[]> lineData, IRule rule) {
+//        rule.resetCounters();
+//        final int label = rule.label;
+//
+//        Set<int[]> result = new HashSet<>(lineData.size());
+//
+//        for (Iterator<int[]> iter = lineData.iterator(); iter.hasNext(); ) {
+//            int[] line = iter.next();
+//            int lbl = rule.classify(line);
+//            if (lbl == IRule.EMPTY) { //rule can not classify line
+//                rule.covers++;
+//                iter.remove();
+//                result.add(line);
+//            } else if (lbl == label) {
+//                rule.correct++;
+//            } else {
+//                rule.errors++;
+//            }
+//        }
+//        assert rule.covers == rule.correct + rule.errors;
+//        return result;
 //    }
 
 
-    /**
-     * reset counters,
-     * keep not covered lines of the input data
-     * and returen covered lines
-     *
-     * @param lineData
-     * @return Set of not covered lines
-     */
-    public Set<int[]> splitAndGetCovered(Set<int[]> lineData, int resultSize) {
-        //TODO the remove all cover, correct, errors increments from here;
-        Set<int[]> coveredLines = new HashSet<>(resultSize);
-        resetCounters();
-        final int lblInLine = lineData.iterator().next().length-1;
-        covers = resultSize;
-        for (Iterator<int[]> iter = lineData.iterator(); iter.hasNext(); ) {
-            int[] line = iter.next();
-            int lbl = classify(line);
-            if(lbl == EMPTY) continue; //not Classified keep it
-
-            covers++;
-
-            if( label == line[lblInLine])
-                correct++;
-            else
-                errors++;
-
-            coveredLines.add(line);
-            iter.remove();
-        }
-
-
-        assert coveredLines.size() == resultSize;
-
-        return coveredLines;
-    }
-
-    /**
-     * Filter the lineData to keep only lines satisfies this rule
-     * Reset correct, covers, and errors
-     *
-     * @param lineData
-     * @return Set of not covered lines
-     */
-    public Set<int[]> keepCoveredBy(Set<int[]> lineData) {
-        return keepCoveredBy(lineData, this);
-    }
-
-    public static Set<int[]> keepCoveredBy(Set<int[]> lineData, IRule rule) {
-        rule.resetCounters();
-        final int label = rule.label;
-
-        Set<int[]> result = new HashSet<>(lineData.size());
-
-        for (Iterator<int[]> iter = lineData.iterator(); iter.hasNext(); ) {
-            int[] line = iter.next();
-            int lbl = rule.classify(line);
-            if (lbl == IRule.EMPTY) { //rule can not classify line
-                rule.covers++;
-                iter.remove();
-                result.add(line);
-            } else if (lbl == label) {
-                rule.correct++;
-            } else {
-                rule.errors++;
-            }
-        }
-        assert rule.covers == rule.correct + rule.errors;
-        return result;
-    }
-
-    ;
 
     public void updateWith(MaxIndex maxIndex) {
         assert this.label == maxIndex.getLabel();
@@ -141,6 +99,7 @@ public class IRule {
         this.covers = maxIndex.getBestCover();
         this.errors = covers - correct;
     }
+
 
     private static int[] addElement(int[] a, int e) {
         a = Arrays.copyOf(a, a.length + 1);
@@ -185,6 +144,10 @@ public class IRule {
     }
 
 
+    public double getLenghtWeighted() {
+        return this.correct * this.getLenght();
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
@@ -203,12 +166,4 @@ public class IRule {
     }
 }
 
-class LinesIRule {
-    final public IRule rule;
-    final public Set<int[]> lines;
 
-    LinesIRule(IRule rule, Set<int[]> lines) {
-        this.rule = rule;
-        this.lines = lines;
-    }
-}

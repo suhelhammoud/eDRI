@@ -1,25 +1,23 @@
-package weka.classifiers.rules.edri;
+package weka.classifiers.rules.medri;
 
 import com.google.common.base.MoreObjects;
-
-import java.util.Objects;
 
 /**
  * Created by suhel on 21/03/16.
  */
 
-class MaxIndex {
+public class MaxIndex {
     public final static int EMPTY = -1;
     private int bestCorrect = -1;//Should start with negative value
     int bestCover = 0;
-    private int att = EMPTY, item = EMPTY, label = EMPTY;
+    private int bestAtt = EMPTY, bestItem = EMPTY, label = EMPTY;
 
-    public int getAtt() {
-        return att;
+    public int getBestAtt() {
+        return bestAtt;
     }
 
-    public int getItem() {
-        return item;
+    public int getBestItem() {
+        return bestItem;
     }
 
     public int getLabel() {
@@ -36,8 +34,8 @@ class MaxIndex {
 
     public MaxIndex copy() {
         MaxIndex result = new MaxIndex();
-        result.att = this.att;
-        result.item = this.item;
+        result.bestAtt = this.bestAtt;
+        result.bestItem = this.bestItem;
         result.label = this.label;
         result.bestCorrect = this.bestCorrect;
         result.bestCover = this.bestCover;
@@ -68,11 +66,10 @@ class MaxIndex {
     public boolean maxOne(int[] itemLabels, int attIndex, int itemIndex, int label) {
         int sum = sum(itemLabels);
         boolean changed = false;
-//        for (int i = 0; i < itemLabels.length; i++) {
         int diff = itemLabels[label] * bestCover - bestCorrect * sum;
         if (diff > 0 || diff == 0 && itemLabels[label] > bestCorrect) {
-            this.att = attIndex;
-            this.item = itemIndex;
+            this.bestAtt = attIndex;
+            this.bestItem = itemIndex;
             this.label = label;
             this.bestCorrect = itemLabels[label];
             this.bestCover = sum;
@@ -88,13 +85,12 @@ class MaxIndex {
         for (int i = 0; i < itemLabels.length; i++) {
             int diff = itemLabels[i] * bestCover - bestCorrect * sum;
             if (diff > 0 || diff == 0 && itemLabels[i] > bestCorrect) {
-                this.att = attIndex;
-                this.item = itemIndex;
+                this.bestAtt = attIndex;
+                this.bestItem = itemIndex;
                 this.label = i;
                 this.bestCorrect = itemLabels[i];
                 this.bestCover = sum;
                 changed = true;
-//                System.out.println("changed " + toString());
             }
         }
         return changed;
@@ -104,8 +100,8 @@ class MaxIndex {
     public String toString() {
 
         return MoreObjects.toStringHelper(this)
-                .add("att", att)
-                .add("item", item)
+                .add("bestAtt", bestAtt)
+                .add("bestItem", bestItem)
                 .add("lbl", label)
                 .add("correct", bestCorrect)
                 .add("cover", bestCover)

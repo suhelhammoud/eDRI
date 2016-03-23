@@ -246,9 +246,7 @@ public class eDRI
         return result;
     }
 
-    public void buildClassifierSuhel(Instances data, int minFreqs, double minConfidence) throws Exception {
 
-    }
 
     /**
      * After running, m_rules will be refilled with new learned rules, oPtion will holds values of:
@@ -317,7 +315,7 @@ public class eDRI
             int cls = (int) data.instance(i).value(classIndex);
             freqs[cls]++;
         }
-        ;
+
         int maxVal = Integer.MIN_VALUE;
         int maxIndex = Integer.MIN_VALUE;
         for (int i = 0; i < freqs.length; i++) {

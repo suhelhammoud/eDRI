@@ -1,13 +1,12 @@
-package weka.classifiers.rules.edri;
+package weka.classifiers.rules.medri;
 
 //import com.google.common.base.Joiner;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import weka.classifiers.rules.edri.EDRIUtils;
 import weka.core.Instance;
 import weka.core.Instances;
 
@@ -17,55 +16,25 @@ import java.util.*;
 /**
  * Created by suhel on 17/03/16.
  */
-public class DRIData {
+public class MedriUtils {
 
-    static Logger logger = LoggerFactory.getLogger(DRIData.class);
+    static Logger logger = LoggerFactory.getLogger(MedriUtils.class);
 
-    final public int labelIndex;
 
-    /**
-     * Holds the label for each line number
-     */
-//    final public int[] lineLabel;
-
-    /**
-     * Hold the countStep of each class label
-     */
-//    final public int[] labelAtt;
-
-    /**
-     * Holds the number of items in each attribute
-     */
-    final public int[] iattrs;
-    final public int numLabels;
-    final public int[] labelsCount;
-//    /**
-//     * Holds the values of items for each row instance
-//     */
-//    final public Set<int[]> lineData;
-
-    public DRIData(Instances data) {
-
-        this.iattrs = new int[data.numAttributes()];
-        this.labelIndex = iattrs.length - 1;
-        this.numLabels = data.attribute(labelIndex).numValues();
-        this.labelsCount = new int[numLabels];
-        mapIAttrs(data);
-
-//        this.labelAtt = new int[data.attribute(labelIndex).numValues()];
-//      this.lineLabel = new int[data.numInstances()];
-//      this.lineData = new HashSet<>(data.numInstances());
-//        mapIdataAndLabels(data);
-    }
-
-    private void mapIAttrs(Instances data) {
+    public static int[] mapAttributes(Instances data) {
+        int[] iattrs = new int[data.numAttributes()];
         for (int i = 0; i < iattrs.length; i++) {
             iattrs[i] = data.attribute(i).numValues();
         }
+        return iattrs;
     }
 
-    public Set<int[]> mapIdataAndLabels(Instances data) {
+    public static Pair<Set<int[]>, int[]> mapIdataAndLabels(Instances data) {
+        int labelIndex = data.classIndex();
+        assert labelIndex == data.numAttributes()-1;
+
         Set<int[]> lineData = new HashSet<>(data.numInstances());
+        int[] labelsCount = new int[data.attribute(data.classIndex()).numValues()];
 
         int numAttrs = data.numAttributes();
         for (int i = 0; i < data.numInstances(); i++) {
@@ -78,8 +47,21 @@ public class DRIData {
             labelsCount[row[labelIndex]]++;
             lineData.add(row);
         }
-        return lineData;
+        return new Pair(lineData, labelsCount);
     }
+
+    public static int[] toIntArray(Instance instance) {
+        int[] result = new int[instance.numValues()];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = (int)instance.value(i);
+        }
+        return result;
+    }
+
+    public static String formatIntPattern(int maxDigit) {
+        int digits = (int) (Math.ceil(Math.log10(maxDigit+1)));
+        return  "%0"+ digits +"d";
+    };
 
     public static StringBuilder print(Collection<int[]> c) {
         StringBuilder sb = new StringBuilder();
@@ -109,13 +91,16 @@ public class DRIData {
     }
 
 
-    public static int[][][] countStep(DRIData dd, Set<int[]> lineData, int[] avAtts) {
+    public static int[][][] countStep(int[] iattrs, Set<int[]> lineData, int[] avAtts) {
+
+        int labelIndex = iattrs.length-1;
+        int numLabels = iattrs[labelIndex];
 
         //create array of attributes, withoud the class name;
-        int[][][] result = new int[dd.iattrs.length][][];
+        int[][][] result = new int[iattrs.length][][];
 
         for (int attIndex : avAtts) {
-            result[attIndex] = new int[dd.iattrs[attIndex]][dd.numLabels];
+            result[attIndex] = new int[iattrs[attIndex]][numLabels];
         }
         for (int i = 0; i < result.length; i++) {
             if (result[i] == null) result[i] = new int[0][0];
@@ -123,7 +108,7 @@ public class DRIData {
 
         //filling with values
         for (int[] row : lineData) {
-            int cls = row[dd.labelIndex];
+            int cls = row[labelIndex];
 
             for (int a : avAtts)
                 result[a][row[a]][cls]++;
@@ -131,7 +116,7 @@ public class DRIData {
         return result;
     }
 
-//    public static int[][][] countStep(DRIData driData, Set<int[]> lineData) {
+//    public static int[][][] countStep(MedriUtils driData, Set<int[]> lineData) {
 //
 //        //create array of attributes, withoud the class name;
 //        int[][][] result = new int[driData.iattrs.length][][];
@@ -169,16 +154,19 @@ public class DRIData {
     }
 
     /**
-     * @param dd       (with label index and iattrs length values
+     * @param iattrs    holds number of item for each attribute including the class attribute
      * @param lineData line data, pruned at the end to NOT COVERED instances
      * @param label    label index
      * @return
      */
-    public static LinesIRule calcStep(DRIData dd, Set<int[]> lineData, final int label) {
+    public static IRuleLines calcStep(int[] iattrs, Set<int[]> lineData, final int label) {
 
-        /** Start with all attributes*/
+        int labelIndex = iattrs.length-1;
+        int numLabels = iattrs[labelIndex];
+
+        /** Start with all attributes, does not include the label attribute*/
         Set<Integer> avAtts = new LinkedHashSet<>();
-        for (int i = 0; i < dd.labelIndex; i++) avAtts.add(i);
+        for (int i = 0; i < labelIndex; i++) avAtts.add(i);
 
 
         IRule rule = new IRule(label);
@@ -190,7 +178,7 @@ public class DRIData {
 
        do {
 
-            int[][][] stepCount = countStep(dd, tmpLines, Ints.toArray(avAtts));
+            int[][][] stepCount = countStep(iattrs, tmpLines, Ints.toArray(avAtts));
             MaxIndex mx = MaxIndex.of(stepCount, rule.label);
 
             logger.trace("maxIndex for step = {}", mx);
@@ -198,8 +186,8 @@ public class DRIData {
             assert mx.getLabel() == label;
 
 
-            avAtts.remove(mx.getAtt());
-            rule.addTest(mx.getAtt(), mx.getItem());
+            avAtts.remove(mx.getBestAtt());
+            rule.addTest(mx.getBestAtt(), mx.getBestItem());
             rule.updateWith(mx);
 
             Set<int[]> coveredLines  = splitAndGetCovered(tmpLines,rule, mx.bestCover);
@@ -218,25 +206,28 @@ public class DRIData {
 
         lineData.addAll(avoidedLines);
         logger.trace("exit calc steps with final rule ={}",rule);
-        return new LinesIRule(rule, lineData);
+        return new IRuleLines(rule, lineData);
     }
 
 
 
-    public static List<IRule> buildClassifierPrism(DRIData dd, Set<int[]> lineData) {
+    public static List<IRule> buildClassifierPrism(int[] iattrs, int[] labelsCount, Set<int[]> lineData) {
         List<IRule> rules = new ArrayList<>();
 
-        for (int cls = 0; cls < dd.numLabels; cls++) {
+        int labelIndex = iattrs.length-1;
+        int numLabels = iattrs[labelIndex];
+
+        for (int cls = 0; cls < numLabels; cls++) {
             logger.trace("****************************************" +
                     "\nfor class = {}", cls);
-            int clsCounter = dd.labelsCount[cls];
+            int clsCounter = labelsCount[cls];
             logger.trace("cls {} count = {}", cls, clsCounter);
             Set<int[]> lines = new HashSet<>(lineData);//defensive copy
 
 //            for (int i = 0; i < 4; i++) {
 ////            }
             while (clsCounter > 0) {
-                LinesIRule lnrl = calcStep(dd, lines, cls);
+                IRuleLines lnrl = calcStep(iattrs, lines, cls);
                 logger.trace("rule {}", lnrl.rule);
                 logger.trace("remaining lines={}\n{}", lnrl.lines.size(),print(lnrl.lines));
 
@@ -258,52 +249,19 @@ public class DRIData {
         String inFile = "/media/suhel/workspace/work/wekaprism/data/cl.arff";
 
         Instances data = new Instances(EDRIUtils.readDataFile(inFile));
+        data.setClassIndex(data.numAttributes()-1);
         System.out.println(data.numInstances());
-        DRIData dd = new DRIData(data);
+        int[] iattrs = MedriUtils.mapAttributes(data);
 
-        Set<int[]> lineData = dd.mapIdataAndLabels(data);
+        Pair<Set<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
+        Set<int[]> lineData = linesLabels.key;
+        int[] labelsCount = linesLabels.value;
+
         logger.trace("original lines\n{}", print(lineData));
-        List<IRule> rules = buildClassifierPrism(dd, lineData);
+        List<IRule> rules = buildClassifierPrism(iattrs, labelsCount, lineData);
 
         logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));
-        if (true) {
-            return;
-        }
-        Set<int[]> notCovered = new HashSet<>(lineData);
-//        List<IRule> rules = new ArrayList<>();
-        LinesIRule lnrl;
 
-        logger.trace("lineLabel {}", lineData.size());
-        logger.trace("not covered {}", notCovered.size());
-
-        int label = 0;
-        logger.trace("label used = {}", label);
-
-        logger.trace("Start Rule One *****************");
-        logger.trace("lines size = {}", notCovered.size());
-        lnrl = calcStep(dd, notCovered, label);
-        logger.trace("rule 1 = {}", lnrl.rule.toString());
-        rules.add(lnrl.rule);
-//        notCovered.addAll(lnrl.lines);
-        logger.trace("not covered size = {}", notCovered.size());
-
-
-        logger.trace("Start Rule Two *****************");
-        logger.trace("lines size = {}", notCovered.size());
-        lnrl = calcStep(dd, notCovered, label);
-        logger.trace("rule 1 = {}", lnrl.rule.toString());
-        rules.add(lnrl.rule);
-        notCovered.addAll(lnrl.lines);
-        logger.trace("not covered size = {}", notCovered.size());
-
-
-        logger.trace("Start Rule Three *****************");
-        logger.trace("lines size = {}", notCovered.size());
-        lnrl = calcStep(dd, notCovered, label);
-        logger.trace("rule 1 = {}", lnrl.rule.toString());
-        rules.add(lnrl.rule);
-        notCovered.addAll(lnrl.lines);
-        logger.trace("not covered size = {}", notCovered.size());
 
 
     }

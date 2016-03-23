@@ -26,7 +26,7 @@ public class DRIOptions implements OptionHandler, Serializable{
         this.addDefaultRule = addDefaultRule;
     }
 
-    //    static Logger logger = LoggerFactory.getLogger(DRIOptions.class);
+    //    static Logger logger = LoggerFactory.getLogger(MedriOptions.class);
 
 
     enum LEVELS {off, trace, debug, info, warn, error, fatal;
