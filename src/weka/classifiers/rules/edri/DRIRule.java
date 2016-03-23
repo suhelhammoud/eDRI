@@ -7,7 +7,9 @@ import weka.core.RevisionUtils;
 
 import java.io.Serializable;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -260,4 +262,5 @@ public class DRIRule
         }
         return result;
     }
+
 }

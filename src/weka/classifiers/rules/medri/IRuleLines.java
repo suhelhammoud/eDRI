@@ -1,5 +1,6 @@
 package weka.classifiers.rules.medri;
 
+import java.util.Collection;
 import java.util.Set;
 
 /**
@@ -7,9 +8,9 @@ import java.util.Set;
  */
 public class IRuleLines {
     final public IRule rule;
-    final public Set<int[]> lines;
+    final public Collection<int[]> lines;
 
-    IRuleLines(IRule rule, Set<int[]> lines) {
+    IRuleLines(IRule rule, Collection<int[]> lines) {
         this.rule = rule;
         this.lines = lines;
     }
