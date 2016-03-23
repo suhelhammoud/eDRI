@@ -102,6 +102,7 @@ public class MedriUtils {
         for (int attIndex : avAtts) {
             result[attIndex] = new int[iattrs[attIndex]][numLabels];
         }
+        //fill remaining attributes with empty arrays
         for (int i = 0; i < result.length; i++) {
             if (result[i] == null) result[i] = new int[0][0];
         }
@@ -140,7 +141,6 @@ public class MedriUtils {
 
     public static Set<int[]> splitAndGetCovered(Set<int[]> lineData, IRule rule, int resultSize) {
         Set<int[]> coveredLines = new HashSet<>(resultSize);
-        final int lblInLine = lineData.iterator().next().length - 1;
         for (Iterator<int[]> iter = lineData.iterator(); iter.hasNext(); ) {
             int[] line = iter.next();
 
@@ -173,7 +173,6 @@ public class MedriUtils {
 
 
         Set<int[]> tmpLines = lineData;
-        Set<int[]> linesRemained = null;
         Set<int[]> avoidedLines = new HashSet<>(lineData.size());
 
        do {
@@ -192,14 +191,9 @@ public class MedriUtils {
 
             Set<int[]> coveredLines  = splitAndGetCovered(tmpLines,rule, mx.bestCover);
            avoidedLines.addAll(tmpLines);
-           linesRemained = tmpLines;
-            logger.trace("tmpLines =\n{}", print(tmpLines));
-            logger.trace("coveredLines =\n{}", print(coveredLines));
 
-            logger.trace("switch tmpLines of size= {}, into coveredLines of size= {}", tmpLines.size(), coveredLines.size());
-//            if (linesRemained == null) {
-//
-//            }
+            logger.trace("switch tmpLines of size= {}, into coveredLines of size= {}",
+                    tmpLines.size(), coveredLines.size());
             tmpLines = coveredLines;
 
         }  while (rule.getErrors() > 0 && avAtts.size() > 0);
@@ -229,7 +223,7 @@ public class MedriUtils {
             while (clsCounter > 0) {
                 IRuleLines lnrl = calcStep(iattrs, lines, cls);
                 logger.trace("rule {}", lnrl.rule);
-                logger.trace("remaining lines={}\n{}", lnrl.lines.size(),print(lnrl.lines));
+                logger.trace("remaining lines={}", lnrl.lines.size());
 
                 lines = lnrl.lines;
                 clsCounter -= lnrl.rule.getCorrect();
@@ -257,7 +251,7 @@ public class MedriUtils {
         Set<int[]> lineData = linesLabels.key;
         int[] labelsCount = linesLabels.value;
 
-        logger.trace("original lines\n{}", print(lineData));
+        logger.trace("original lines size = {}", lineData.size());
         List<IRule> rules = buildClassifierPrism(iattrs, labelsCount, lineData);
 
         logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));

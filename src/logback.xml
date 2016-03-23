@@ -10,7 +10,7 @@
         </encoder>
     </appender>
 
-    <root level="all">
+    <root level="off">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>

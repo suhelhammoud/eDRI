@@ -1,16 +1,19 @@
 package weka.classifiers.rules;
 
+import com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import weka.classifiers.Classifier;
 import weka.classifiers.rules.medri.IRule;
 import weka.classifiers.rules.medri.MedriOptions;
 import weka.classifiers.rules.medri.MedriUtils;
+import weka.classifiers.rules.medri.Pair;
 import weka.core.*;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by suhel on 23/03/16.
@@ -200,9 +203,34 @@ public class MeDRI   extends Classifier
      * @throws Exception if the classifier can't built successfully
      */
     public void buildClassifier(Instances data) throws Exception {
+        logger.info("build classifer with data ={} of size={}", data.relationName(), data.numInstances());
+        assert data.classIndex() == data.numAttributes()-1;
+
+        data.setClassIndex(data.numAttributes()-1);
+
+
+        buildClassifierMeDRI(data);
 
     }
 
+
+    public void buildClassifierMeDRI(Instances data) {
+
+        int[] iattrs = MedriUtils.mapAttributes(data);
+
+        Pair<Set<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
+        Set<int[]> lineData = linesLabels.key;
+        int[] labelsCount = linesLabels.value;
+
+        logger.trace("original lines size ={}", lineData.size());
+        List<IRule> rules = MedriUtils.buildClassifierPrism(iattrs, labelsCount, lineData);
+
+//        logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));
+
+        m_rules.clear();
+        m_rules.addAll(rules);
+
+    }
     /**
      * Prints a description of the classifier.
      *

@@ -2,6 +2,7 @@ package weka.classifiers.rules.medri;
 
 import com.google.common.base.MoreObjects;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -12,7 +13,9 @@ import java.util.Set;
  */
 
 
-public class IRule {
+public class IRule implements Serializable{
+    static final long serialVersionUID = 424878435065750583L;
+
     public final static int EMPTY = -1;
     public final int label;
     private int[] attIndexes;
