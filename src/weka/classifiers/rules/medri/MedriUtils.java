@@ -98,7 +98,7 @@ public class MedriUtils {
         int labelIndex = iattrs.length - 1;
         int numLabels = iattrs[labelIndex];
 
-        //create array ofOne attributes, withoud the class name;
+        //create array of One attributes, withoud the class name;
         int[][][] result = new int[iattrs.length][][];
 
         for (int attIndex : avAtts) {
@@ -119,26 +119,6 @@ public class MedriUtils {
         return result;
     }
 
-//    public static int[][][] countStep(MedriUtils driData, Set<int[]> lineData) {
-//
-//        //create array ofOne attributes, withoud the class name;
-//        int[][][] result = new int[driData.iattrs.length][][];
-//
-//        //init counters
-//        for (int attIndex = 0; attIndex < result.length; attIndex++) {
-//            //create array ofOne elements for each attribute
-//            result[attIndex] = new int[driData.iattrs[attIndex]][driData.numLabels];
-//        }
-//
-//        //filling with values
-//        for (int[] row : lineData) {
-//            int cls = row[driData.labelIndex];
-//            for (int a = 0; a < row.length; a++) {
-//                result[a][row[a]][cls]++;
-//            }
-//        }
-//        return result;
-//    }
 
 
 
@@ -146,7 +126,7 @@ public class MedriUtils {
      *
      * @param lineData
      * @param rule
-     * @param resultSize bestCover ofOne the last MaxIndex
+     * @param resultSize bestCover of the last MaxIndex
      * @return Pair<coveredLines, notCoveredLines>
      */
     public static Pair<Collection<int[]>, Collection<int[]>> splitAndGetCovered(
@@ -172,7 +152,7 @@ public class MedriUtils {
     }
 
     /**
-     * @param iattrs   holds number ofOne item for each attribute including the class attribute
+     * @param iattrs   holds number of item for each attribute including the class attribute
      * @param lineData line data, pruned at the end to NOT COVERED instances
      * @param label    label index
      * @return
@@ -216,7 +196,7 @@ public class MedriUtils {
 
 
     /**
-     * @param iattrs   holds number ofOne item for each attribute including the class attribute
+     * @param iattrs   holds number of items for each attribute including the class attribute
      * @param lineData line data, pruned at the end to NOT COVERED instances
      * @param label    label index
      * @return
@@ -272,8 +252,8 @@ public class MedriUtils {
     }
 
 
-    public static List<IRule> buildClassifierMeDRI(int[] iattrs, int[] labelsCount, Collection<int[]> lineData,
-                                                   int minFreq, double minConfidence, boolean addDefaultRule) {
+    public static List<IRule> buildClassifierEDRI(int[] iattrs, int[] labelsCount, Collection<int[]> lineData,
+                                                  int minFreq, double minConfidence, boolean addDefaultRule) {
         List<IRule> rules = new ArrayList<>();
 
         int labelIndex = iattrs.length - 1;
@@ -316,6 +296,13 @@ public class MedriUtils {
         return rules;
     }
 
+    /**
+     * Gets the majority class of the remaining instances as DRIRule
+     * @param lines
+     * @param labelIndex
+     * @param numLabels
+     * @return
+     */
     private static IRule getDefaultRule(Collection<int[]> lines, int labelIndex, int numLabels) {
         int[] freqs = new int[numLabels];
         for (int[] line : lines) {
