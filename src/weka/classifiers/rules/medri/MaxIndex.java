@@ -61,6 +61,16 @@ public class MaxIndex {
         return mi;
     }
 
+ public static MaxIndex ofMeDRI(int[][][] count, int minFreq, double minConfidence) {
+        MaxIndex mi = new MaxIndex(minFreq,minConfidence);
+        for (int at = 0; at < count.length; at++) {
+            for (int itm = 0; itm < count[at].length; itm++) {
+                mi.maxMeDRI(count[at][itm], at, itm);
+            }
+        }
+        return mi;
+    }
+
     public static MaxIndex ofOne(int[][][] count, int label) {
         MaxIndex mi = new MaxIndex(0,0);
         for (int at = 0; at < count.length; at++) {
@@ -127,6 +137,26 @@ public class MaxIndex {
             }
         }
         return changed;
+    }
+
+
+    private void maxMeDRI(int[] itemLabels, int attIndex, int itemIndex ) {
+        int sum = sum(itemLabels);
+        for (int i = 0; i < itemLabels.length; i++) {
+            int itemCorrect = itemLabels[i];
+            if(itemCorrect < minFreq) continue;
+
+            if(minConfidence > (double)itemCorrect/(double)sum) continue;
+
+            int diff = itemCorrect * bestCover - bestCorrect * sum;
+            if (diff > 0 || diff == 0 && itemCorrect > bestCorrect) {
+                this.bestAtt = attIndex;
+                this.bestItem = itemIndex;
+                this.label = i;
+                this.bestCorrect = itemCorrect;
+                this.bestCover = sum;
+            }
+        }
     }
 
     @Override

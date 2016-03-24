@@ -114,7 +114,6 @@ public class MeDRI extends Classifier
     }
 
 
-
     public double getMinSupport() {
         return moptions.getMinSupport();
     }
@@ -131,19 +130,19 @@ public class MeDRI extends Classifier
         moptions.setMinConfidence(confidence);
     }
 
-    public void setDebugLevel(SelectedTag newMethod) {
-        moptions.setDebugLevel(newMethod);
-    }
+//    public void setDebugLevel(SelectedTag newMethod) {
+//        moptions.setDebugLevel(newMethod);
+//    }
+//
+//    public SelectedTag getDebugLevel() {
+//        return moptions.getDebugLevel();
+//    }
+//
+//    public String debugLevelTipText() {
+//        return "debug level tip text";
+//    }
 
-    public SelectedTag getDebugLevel() {
-        return moptions.getDebugLevel();
-    }
-
-    public String debugLevelTipText() {
-        return "debug level tip text";
-    }
-
-public void setAlgorithm(SelectedTag newMethod) {
+    public void setAlgorithm(SelectedTag newMethod) {
         moptions.setAlgorithm(newMethod);
     }
 
@@ -175,7 +174,6 @@ public void setAlgorithm(SelectedTag newMethod) {
     }
 
 
-
     /**
      * Generates the classifier.
      *
@@ -195,24 +193,48 @@ public void setAlgorithm(SelectedTag newMethod) {
                 buildClassifierPrism(data);
                 break;
 
-            case "edri":
+            case "edri": {
                 double minSupport = moptions.getMinSupport();
                 double minConfidence = moptions.getMinConfidence();
-                int minFreq = (int) Math.ceil(minSupport * data.numInstances());
+                int minFreq = (int) Math.ceil(minSupport * data.numInstances()+ 1.e-6);
                 logger.debug("minFreq used = {}", minFreq);
-                buildClassifierEDRI(data,minFreq,minConfidence, moptions.getAddDefaultRule());
-                break;
+                buildClassifierEDRI(data, minFreq, minConfidence, moptions.getAddDefaultRule());
+            }
+            break;
 
-            case "medri":
-                //TODO implement it
+            case "medri": {
+                double minSupport = moptions.getMinSupport();
+                double minConfidence = moptions.getMinConfidence();
+                int minFreq = (int) Math.ceil(minSupport * data.numInstances() + 1.e-6);
+                logger.debug("minFreq used = {}", minFreq);
+                buildClassifierMeDRI(data, minFreq, minConfidence, moptions.getAddDefaultRule());
+
                 System.out.println("run medri algorithm");
-                break;
+            }
+            break;
 
             default:
                 System.err.println("Algorithm is no listed before");
 
         }
 
+    }
+
+    public void buildClassifierMeDRI(Instances data, int minSupport, double minConfidence, boolean addDefaultRule) {
+        int[] iattrs = MedriUtils.mapAttributes(data);
+
+        Pair<Collection<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
+        Collection<int[]> lineData = linesLabels.key;
+        int[] labelsCount = linesLabels.value;
+
+        logger.trace("original lines size ={}", lineData.size());
+        List<IRule> rules = MedriUtils.buildClassifierMeDRI(iattrs, labelsCount,
+                lineData, minSupport, minConfidence, addDefaultRule);
+
+//        logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));
+
+        m_rules.clear();
+        m_rules.addAll(rules);
     }
 
     public void buildClassifierEDRI(Instances data, int minSupport, double minConfidence, boolean addDefaultRule) {

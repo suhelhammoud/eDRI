@@ -64,7 +64,6 @@ public class MedriUtils {
     }
 
 
-
     public static StringBuilder print(Collection<int[]> c) {
         StringBuilder sb = new StringBuilder();
         for (Iterator<int[]> iter = c.iterator(); iter.hasNext(); ) {
@@ -120,10 +119,7 @@ public class MedriUtils {
     }
 
 
-
-
     /**
-     *
      * @param lineData
      * @param rule
      * @param resultSize bestCover of the last MaxIndex
@@ -195,6 +191,61 @@ public class MedriUtils {
     }
 
 
+    public static IRuleLines calcStepMeDRI(int[] iattrs, Collection<int[]> lineData,
+                                           int minFreq, double minConfidence) {
+
+        if (lineData.size() < minFreq) return null;
+
+        int labelIndex = iattrs.length - 1;
+        int numLabels = iattrs[labelIndex];
+
+        /** Start with all attributes, does not include the label attribute*/
+        Set<Integer> avAtts = new LinkedHashSet<>();
+        for (int i = 0; i < labelIndex; i++) avAtts.add(i);
+        IRule rule = null;// new IRule(label);// Does not know the label yet
+        MaxIndex mx = null;
+
+        Collection<int[]> entryLines = lineData;
+        Collection<int[]> notCoveredLines = new ArrayList<>(lineData.size());
+
+        do {
+
+            int[][][] stepCount = countStep(iattrs, entryLines, Ints.toArray(avAtts));
+            if (mx == null) {
+                //For the first time
+                mx = MaxIndex.ofMeDRI(stepCount, minFreq, minConfidence);
+                if (mx.getLabel() == MaxIndex.EMPTY) return null;
+                rule = new IRule(mx.getLabel());
+            } else {
+                mx = MaxIndex.ofSupportConfidence(stepCount, mx.getLabel(), minFreq, minConfidence);
+                if (mx.getLabel() == MaxIndex.EMPTY) break;
+
+            }
+
+
+            assert mx.getLabel() != MaxIndex.EMPTY;
+            assert mx.getLabel() == rule.label;
+            assert mx.getBestAtt() >= 0;
+            assert mx.getBestItem() >= 0;
+
+            avAtts.remove(mx.getBestAtt());
+            rule.addTest(mx.getBestAtt(), mx.getBestItem());
+            rule.updateWith(mx);
+
+            Pair<Collection<int[]>, Collection<int[]>> splitResult = splitAndGetCovered(entryLines, rule, mx.bestCover);
+            notCoveredLines.addAll(splitResult.value);
+
+            entryLines = splitResult.key;
+
+        } while (rule.getErrors() > 0 && avAtts.size() > 0 && rule.getCorrect() >= minFreq);
+
+        if (rule.getLenght() == 0) {//TODO more inspection is needed here
+            return null;
+        }
+
+        return new IRuleLines(rule, notCoveredLines);
+    }
+
     /**
      * @param iattrs   holds number of items for each attribute including the class attribute
      * @param lineData line data, pruned at the end to NOT COVERED instances
@@ -204,7 +255,7 @@ public class MedriUtils {
     public static IRuleLines calcStep(int[] iattrs, Collection<int[]> lineData, final int label,
                                       int minFreq, double minConfidence) {
 
-        if(lineData.size() < minFreq) return null;
+        if (lineData.size() < minFreq) return null;
 
         int labelIndex = iattrs.length - 1;
         int numLabels = iattrs[labelIndex];
@@ -224,7 +275,7 @@ public class MedriUtils {
             MaxIndex mx = MaxIndex.ofSupportConfidence(stepCount,
                     rule.label, minFreq, minConfidence);
 
-            if(mx.getLabel() == MaxIndex.EMPTY){
+            if (mx.getLabel() == MaxIndex.EMPTY) {
                 break;
             }
 
@@ -252,6 +303,51 @@ public class MedriUtils {
     }
 
 
+    public static List<IRule> buildClassifierMeDRI(int[] iattrs, int[] labelsCount, Collection<int[]> lineData,
+                                                   int minFreq, double minConfidence, boolean addDefaultRule) {
+        List<IRule> rules = new ArrayList<>();
+
+        int labelIndex = iattrs.length - 1;
+        int numLabels = iattrs[labelIndex];
+        labelsCount = labelsCount.clone();
+
+        int lineDataSize = lineData.size();
+
+        Collection<int[]> remainingLines = null;
+
+
+        Collection<int[]> lines = lineData;//new ArrayList<>(lineData);//defensive copy
+
+
+        while (lineDataSize > 0) {
+            IRuleLines lnrl = calcStepMeDRI(iattrs, lines, minFreq, minConfidence);
+            if (lnrl == null) break; // stop adding rules for current class. break out to the new class
+
+
+            logger.trace("rule {}", lnrl.rule);
+            logger.trace("remaining lines={}", lnrl.lines.size());
+
+            lines = lnrl.lines;
+            remainingLines = lines;
+            lineDataSize -= lnrl.rule.getCorrect();
+            logger.trace("took {} , remains {} instances",
+                    lnrl.rule.getCorrect(), lineDataSize);
+
+            rules.add(lnrl.rule);
+        }
+
+        if (addDefaultRule) {
+            if (remainingLines != null && remainingLines.size() > 0) {
+                IRule rule = getDefaultRule(remainingLines, labelIndex, numLabels);
+                rules.add(rule);
+            }
+        }
+
+        //TODO check to add defaultRule
+        assert rules.size() > 0;
+        return rules;
+    }
+
     public static List<IRule> buildClassifierEDRI(int[] iattrs, int[] labelsCount, Collection<int[]> lineData,
                                                   int minFreq, double minConfidence, boolean addDefaultRule) {
         List<IRule> rules = new ArrayList<>();
@@ -270,7 +366,7 @@ public class MedriUtils {
 
             while (clsCounter > 0) {
                 IRuleLines lnrl = calcStep(iattrs, lines, cls, minFreq, minConfidence);
-                if(lnrl == null) break; // stop adding rules for current class. break out to the new class
+                if (lnrl == null) break; // stop adding rules for current class. break out to the new class
 
 
                 logger.trace("rule {}", lnrl.rule);
@@ -298,6 +394,7 @@ public class MedriUtils {
 
     /**
      * Gets the majority class of the remaining instances as DRIRule
+     *
      * @param lines
      * @param labelIndex
      * @param numLabels
@@ -319,7 +416,7 @@ public class MedriUtils {
         }
         IRule rule = new IRule(maxIndex, maxVal, MaxIndex.sum(freqs));
 
-        return rule ;
+        return rule;
     }
 
     public static List<IRule> buildClassifierPrism(int[] iattrs, int[] labelsCount, Collection<int[]> lineData) {
@@ -373,7 +470,6 @@ public class MedriUtils {
 
 
     }
-
 
 
 }
