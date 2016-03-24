@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Class for storing a list of attribute-value tests
+ * Class for storing a list ofOne attribute-value tests
  */
 public class DRITest
         implements Serializable, RevisionHandler {

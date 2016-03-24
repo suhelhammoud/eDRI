@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Class for storing a PRISM ruleset, i.e. a list of rules
+ * Class for storing a PRISM ruleset, i.e. a list ofOne rules
  */
 public class DRIRule
         implements Serializable, RevisionHandler {
@@ -36,12 +36,12 @@ public class DRIRule
     final Instances m_instances;
 
     /**
-     * First test of this rule
+     * First test ofOne this rule
      */
     public DRITest m_text;
 
     /**
-     * Number of errors made by this rule (will end up 0)
+     * Number ofOne errors made by this rule (will end up 0)
      */
     public int m_errors;
 
@@ -136,7 +136,7 @@ public class DRIRule
     }
 
     /**
-     * Returns the set of instances that are covered by this rule.
+     * Returns the set ofOne instances that are covered by this rule.
      *
      * @param data the instances to be checked
      * @return the instances covered
@@ -157,7 +157,7 @@ public class DRIRule
     }
 
     /**
-     * Returns the set of instances that are not covered by this rule.
+     * Returns the set ofOne instances that are not covered by this rule.
      *
      * @param data the instances to be checked
      * @return the instances not covered
@@ -193,9 +193,9 @@ public class DRIRule
 
 
     /**
-     * Prints the set of rules.
+     * Prints the set ofOne rules.
      *
-     * @return a description of the rules as a string
+     * @return a description ofOne the rules as a string
      */
     public String toString(int maxDigits) {
 

@@ -10,15 +10,12 @@ import weka.classifiers.rules.medri.MedriUtils;
 import weka.classifiers.rules.medri.Pair;
 import weka.core.*;
 
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by suhel on 23/03/16.
  */
-public class MeDRI   extends Classifier
+public class MeDRI extends Classifier
         implements OptionHandler, TechnicalInformationHandler {
 
     static Logger logger = LoggerFactory.getLogger(MeDRI.class);
@@ -48,8 +45,8 @@ public class MeDRI   extends Classifier
     }
 
     /**
-     * Returns an instance of a TechnicalInformation object, containing
-     * detailed information about the technical background of this class,
+     * Returns an instance ofOne a TechnicalInformation object, containing
+     * detailed information about the technical background ofOne this class,
      * e.g., paper reference or book this class is based on.
      *
      * @return the technical information about this class
@@ -73,7 +70,9 @@ public class MeDRI   extends Classifier
      */
     private MedriOptions moptions = new MedriOptions();
 
-    /** Holds algorithm configurations and MedriOption parameters */
+    /**
+     * Holds algorithm configurations and MedriOption parameters
+     */
     private List<IRule> m_rules = new ArrayList<>();
 
     /**
@@ -86,7 +85,7 @@ public class MeDRI   extends Classifier
 
         for (IRule rule : m_rules) {
             int cls = rule.classify(MedriUtils.toIntArray(inst));
-            if(cls != IRule.EMPTY)
+            if (cls != IRule.EMPTY)
                 return cls;
         }
         return Instance.missingValue();
@@ -152,9 +151,9 @@ public class MeDRI   extends Classifier
     }
 
     /**
-     * Returns default capabilities of the classifier.
+     * Returns default capabilities ofOne the classifier.
      *
-     * @return the capabilities of this classifier
+     * @return the capabilities ofOne this classifier
      */
     public Capabilities getCapabilities() {
         Capabilities result = super.getCapabilities();
@@ -171,10 +170,10 @@ public class MeDRI   extends Classifier
     }
 
     /**
-     * Gets the majority class of the remaining instances as DRIRule
+     * Gets the majority class ofOne the remaining instances as DRIRule
      *
      * @param data: Remaining dataset
-     * @return: DRIRule of the majority class
+     * @return: DRIRule ofOne the majority class
      */
     public IRule getDefaultRule(Instances data) {
         //TODO tobe implemented using new counter methods
@@ -203,14 +202,39 @@ public class MeDRI   extends Classifier
      * @throws Exception if the classifier can't built successfully
      */
     public void buildClassifier(Instances data) throws Exception {
-        logger.info("build classifer with data ={} of size={}", data.relationName(), data.numInstances());
-        assert data.classIndex() == data.numAttributes()-1;
+        logger.info("build classifer with data ={} ofOne size={}", data.relationName(), data.numInstances());
+        assert data.classIndex() == data.numAttributes() - 1;
 
-        data.setClassIndex(data.numAttributes()-1);
+        data.setClassIndex(data.numAttributes() - 1);
+        moptions.setMaxNumInstances(data.numInstances());
 
+        if (moptions.getUseOldPrism()) {
+            buildClassifierMeDRI(data);
+        } else {
+            double minSupport = moptions.getMinSupport();
+            double minConfidence = moptions.getMinConfidence();
+            int minFreq = (int) Math.ceil(minSupport * data.numInstances());
+            logger.debug("minFreq used = {}", minFreq);
+            buildClassifierMeDRI(data,minFreq,minConfidence);
+        }
 
-        buildClassifierMeDRI(data);
+    }
 
+    public void buildClassifierMeDRI(Instances data, int minSupport, double minConfidence) {
+        int[] iattrs = MedriUtils.mapAttributes(data);
+
+        Pair<Collection<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
+        Collection<int[]> lineData = linesLabels.key;
+        int[] labelsCount = linesLabels.value;
+
+        logger.trace("original lines size ={}", lineData.size());
+        List<IRule> rules = MedriUtils.buildClassifierMeDRI(iattrs, labelsCount,
+                lineData, minSupport, minConfidence, moptions.getAddDefaultRule());
+
+//        logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));
+
+        m_rules.clear();
+        m_rules.addAll(rules);
     }
 
 
@@ -218,8 +242,8 @@ public class MeDRI   extends Classifier
 
         int[] iattrs = MedriUtils.mapAttributes(data);
 
-        Pair<Set<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
-        Set<int[]> lineData = linesLabels.key;
+        Pair<Collection<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
+        Collection<int[]> lineData = linesLabels.key;
         int[] labelsCount = linesLabels.value;
 
         logger.trace("original lines size ={}", lineData.size());
@@ -231,10 +255,11 @@ public class MeDRI   extends Classifier
         m_rules.addAll(rules);
 
     }
+
     /**
-     * Prints a description of the classifier.
+     * Prints a description ofOne the classifier.
      *
-     * @return a description of the classifier as a string
+     * @return a description ofOne the classifier as a string
      */
     public String toString() {
         int maxDigits = moptions.getMaxNumInstances();
@@ -244,7 +269,7 @@ public class MeDRI   extends Classifier
 
         StringBuilder sb = new StringBuilder();
 
-        sb.append("Number of rules generated = " + m_rules.size());
+        sb.append("Number ofOne rules generated = " + m_rules.size());
         String intPattern = MedriUtils.formatIntPattern(m_rules.size());
         sb.append("\nPrism rules ( frequency, confidence ) \n----------\n");
         for (int i = 0; i < m_rules.size(); i++) {
@@ -258,16 +283,16 @@ public class MeDRI   extends Classifier
 //        long scannedInstances = getScannedInstances();
         int numInstances = moptions.getMaxNumInstances();
 //        double scannedInstancesPercent = (double)scannedInstances/(double)numInstances;
-        sb.append(String.format("Num of Instances of training dataset = %,d \n", numInstances));
+        sb.append(String.format("Num ofOne Instances ofOne training dataset = %,d \n", numInstances));
 //        sb.append(String.format("Instances scanned to find all rules = %,d  (= %,d * %,3.2f ) \n" , scannedInstances, numInstances, scannedInstancesPercent));
         return sb.toString();
     }
 
-    //all based of all number of instances, remaining default rule length = 0
+    //all based ofOne all number ofOne instances, remaining default rule length = 0
     private double getAvgWeightedRuleLength(List<IRule> rules) {
         double result = 0;
         for (IRule rule : rules) {
-            //TODO accumulate rule rule.m_correct instead of final maxNumInstances
+            //TODO accumulate rule rule.m_correct instead ofOne final maxNumInstances
             result += rule.getLenghtWeighted();
         }
         return result / (double) moptions.getMaxNumInstances();

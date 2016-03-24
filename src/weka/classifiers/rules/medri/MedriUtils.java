@@ -29,11 +29,11 @@ public class MedriUtils {
         return iattrs;
     }
 
-    public static Pair<Set<int[]>, int[]> mapIdataAndLabels(Instances data) {
+    public static Pair<Collection<int[]>, int[]> mapIdataAndLabels(Instances data) {
         int labelIndex = data.classIndex();
         assert labelIndex == data.numAttributes() - 1;
 
-        Set<int[]> lineData = new HashSet<>(data.numInstances());
+        Collection<int[]> lineData = new ArrayList<>(data.numInstances());
         int[] labelsCount = new int[data.attribute(data.classIndex()).numValues()];
 
         int numAttrs = data.numAttributes();
@@ -63,7 +63,7 @@ public class MedriUtils {
         return "%0" + digits + "d";
     }
 
-    ;
+
 
     public static StringBuilder print(Collection<int[]> c) {
         StringBuilder sb = new StringBuilder();
@@ -98,7 +98,7 @@ public class MedriUtils {
         int labelIndex = iattrs.length - 1;
         int numLabels = iattrs[labelIndex];
 
-        //create array of attributes, withoud the class name;
+        //create array ofOne attributes, withoud the class name;
         int[][][] result = new int[iattrs.length][][];
 
         for (int attIndex : avAtts) {
@@ -121,12 +121,12 @@ public class MedriUtils {
 
 //    public static int[][][] countStep(MedriUtils driData, Set<int[]> lineData) {
 //
-//        //create array of attributes, withoud the class name;
+//        //create array ofOne attributes, withoud the class name;
 //        int[][][] result = new int[driData.iattrs.length][][];
 //
 //        //init counters
 //        for (int attIndex = 0; attIndex < result.length; attIndex++) {
-//            //create array of elements for each attribute
+//            //create array ofOne elements for each attribute
 //            result[attIndex] = new int[driData.iattrs[attIndex]][driData.numLabels];
 //        }
 //
@@ -146,11 +146,13 @@ public class MedriUtils {
      *
      * @param lineData
      * @param rule
-     * @param resultSize
+     * @param resultSize bestCover ofOne the last MaxIndex
      * @return Pair<coveredLines, notCoveredLines>
      */
-    public static Pair<Collection<int[]>, Collection<int[]>> splitAndGetCovered(Collection<int[]> lineData, IRule rule, int resultSize) {
-        assert lineData.size() > resultSize;
+    public static Pair<Collection<int[]>, Collection<int[]>> splitAndGetCovered(
+            Collection<int[]> lineData, IRule rule, int resultSize) {
+
+//        assert lineData.size() > resultSize;
 
         Collection<int[]> coveredLines = new ArrayList<>(resultSize);
         Collection<int[]> notCoveredLines = new ArrayList<>(lineData.size() - resultSize);
@@ -170,7 +172,7 @@ public class MedriUtils {
     }
 
     /**
-     * @param iattrs   holds number of item for each attribute including the class attribute
+     * @param iattrs   holds number ofOne item for each attribute including the class attribute
      * @param lineData line data, pruned at the end to NOT COVERED instances
      * @param label    label index
      * @return
@@ -192,7 +194,7 @@ public class MedriUtils {
         do {
 
             int[][][] stepCount = countStep(iattrs, entryLines, Ints.toArray(avAtts));
-            MaxIndex mx = MaxIndex.of(stepCount, rule.label);
+            MaxIndex mx = MaxIndex.ofOne(stepCount, rule.label);
 
             assert mx.getLabel() != MaxIndex.EMPTY;
             assert mx.getLabel() == label;
@@ -213,7 +215,127 @@ public class MedriUtils {
     }
 
 
-    public static List<IRule> buildClassifierPrism(int[] iattrs, int[] labelsCount, Set<int[]> lineData) {
+    /**
+     * @param iattrs   holds number ofOne item for each attribute including the class attribute
+     * @param lineData line data, pruned at the end to NOT COVERED instances
+     * @param label    label index
+     * @return
+     */
+    public static IRuleLines calcStep(int[] iattrs, Collection<int[]> lineData, final int label,
+                                      int minFreq, double minConfidence) {
+
+        if(lineData.size() < minFreq) return null;
+
+        int labelIndex = iattrs.length - 1;
+        int numLabels = iattrs[labelIndex];
+
+        /** Start with all attributes, does not include the label attribute*/
+        Set<Integer> avAtts = new LinkedHashSet<>();
+        for (int i = 0; i < labelIndex; i++) avAtts.add(i);
+        IRule rule = new IRule(label);
+
+
+        Collection<int[]> entryLines = lineData;
+        Collection<int[]> notCoveredLines = new ArrayList<>(lineData.size());
+
+        do {
+
+            int[][][] stepCount = countStep(iattrs, entryLines, Ints.toArray(avAtts));
+            MaxIndex mx = MaxIndex.ofSupportConfidence(stepCount,
+                    rule.label, minFreq, minConfidence);
+
+            if(mx.getLabel() == MaxIndex.EMPTY){
+                break;
+            }
+
+            assert mx.getLabel() != MaxIndex.EMPTY;
+            assert mx.getLabel() == label;
+            assert mx.getBestAtt() >= 0;
+            assert mx.getBestItem() >= 0;
+
+            avAtts.remove(mx.getBestAtt());
+            rule.addTest(mx.getBestAtt(), mx.getBestItem());
+            rule.updateWith(mx);
+
+            Pair<Collection<int[]>, Collection<int[]>> splitResult = splitAndGetCovered(entryLines, rule, mx.bestCover);
+            notCoveredLines.addAll(splitResult.value);
+
+            entryLines = splitResult.key;
+
+        } while (rule.getErrors() > 0 && avAtts.size() > 0 && rule.getCorrect() >= minFreq);
+
+        if (rule.getLenght() == 0) {//TODO more inspection is needed here
+            return null;
+        }
+
+        return new IRuleLines(rule, notCoveredLines);
+    }
+
+
+    public static List<IRule> buildClassifierMeDRI(int[] iattrs, int[] labelsCount, Collection<int[]> lineData,
+                                                   int minFreq, double minConfidence, boolean addDefaultRule) {
+        List<IRule> rules = new ArrayList<>();
+
+        int labelIndex = iattrs.length - 1;
+        int numLabels = iattrs[labelIndex];
+
+        Collection<int[]> remainingLines = null;
+        for (int cls = 0; cls < numLabels; cls++) {
+            logger.trace("****************************************" +
+                    "\nfor class = {}", cls);
+            int clsCounter = labelsCount[cls];
+            logger.trace("cls {} count = {}", cls, clsCounter);
+            Collection<int[]> lines = lineData;//new ArrayList<>(lineData);//defensive copy
+
+
+            while (clsCounter > 0) {
+                IRuleLines lnrl = calcStep(iattrs, lines, cls, minFreq, minConfidence);
+                if(lnrl == null) break; // stop adding rules for current class. break out to the new class
+
+
+                logger.trace("rule {}", lnrl.rule);
+                logger.trace("remaining lines={}", lnrl.lines.size());
+
+                lines = lnrl.lines;
+                remainingLines = lines;
+                clsCounter -= lnrl.rule.getCorrect();
+                logger.trace("took {} , remains {} instances",
+                        lnrl.rule.getCorrect(), clsCounter);
+                rules.add(lnrl.rule);
+            }
+        }
+        if (addDefaultRule) {
+            if (remainingLines != null && remainingLines.size() > 0) {
+                IRule rule = getDefaultRule(remainingLines, labelIndex, numLabels);
+                rules.add(rule);
+            }
+        }
+
+        //TODO check to add defaultRule
+        assert rules.size() > 0;
+        return rules;
+    }
+
+    private static IRule getDefaultRule(Collection<int[]> lines, int labelIndex, int numLabels) {
+        int[] freqs = new int[numLabels];
+        for (int[] line : lines) {
+            freqs[line[labelIndex]]++;
+        }
+
+        int maxVal = Integer.MIN_VALUE;
+        int maxIndex = Integer.MIN_VALUE;
+        for (int i = 0; i < freqs.length; i++) {
+            if (freqs[i] > maxVal) {
+                maxVal = freqs[i];
+                maxIndex = i;
+            }
+        }
+        IRule rule = new IRule(maxIndex, maxVal, MaxIndex.sum(freqs));
+
+        return rule ;
+    }
+
+    public static List<IRule> buildClassifierPrism(int[] iattrs, int[] labelsCount, Collection<int[]> lineData) {
         List<IRule> rules = new ArrayList<>();
 
         int labelIndex = iattrs.length - 1;
@@ -224,10 +346,8 @@ public class MedriUtils {
                     "\nfor class = {}", cls);
             int clsCounter = labelsCount[cls];
             logger.trace("cls {} count = {}", cls, clsCounter);
-            Collection<int[]> lines = new ArrayList<>(lineData);//defensive copy
+            Collection<int[]> lines = lineData;//new ArrayList<>(lineData);//defensive copy
 
-//            for (int i = 0; i < 4; i++) {
-////            }
             while (clsCounter > 0) {
                 IRuleLines lnrl = calcStep(iattrs, lines, cls);
                 logger.trace("rule {}", lnrl.rule);
@@ -255,8 +375,8 @@ public class MedriUtils {
         System.out.println(data.numInstances());
         int[] iattrs = MedriUtils.mapAttributes(data);
 
-        Pair<Set<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
-        Set<int[]> lineData = linesLabels.key;
+        Pair<Collection<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
+        Collection<int[]> lineData = linesLabels.key;
         int[] labelsCount = linesLabels.value;
 
         logger.trace("original lines size = {}", lineData.size());
@@ -266,6 +386,7 @@ public class MedriUtils {
 
 
     }
+
 
 
 }

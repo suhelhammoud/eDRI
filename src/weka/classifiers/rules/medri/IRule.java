@@ -51,6 +51,12 @@ public class IRule implements Serializable{
         this.covers = 0;
     }
 
+    public IRule(int label, int correct, int covers) {
+        this(label);
+        this.correct = correct;
+        this.covers = covers;
+    }
+
     public IRule(int label) {
         assert label != EMPTY;
         this.label = label;
@@ -65,7 +71,7 @@ public class IRule implements Serializable{
 //     * Reset correct, covers, and errors
 //     *
 //     * @param lineData
-//     * @return Set of not covered lines
+//     * @return Set ofOne not covered lines
 //     */
 //    public Set<int[]> keepCoveredBy(Set<int[]> lineData) {
 //        return keepCoveredBy(lineData, this);

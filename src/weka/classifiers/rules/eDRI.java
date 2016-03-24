@@ -16,7 +16,7 @@
 
 /*
  *    Prism.java
- *    Copyright (C) 1999 University of Waikato, Hamilton, New Zealand
+ *    Copyright (C) 1999 University ofOne Waikato, Hamilton, New Zealand
  *
  */
 
@@ -81,7 +81,7 @@ public class eDRI
 
 
     /**
-     * Helper class to hold the result of ruleInstancesxxx(xxx)
+     * Helper class to hold the result ofOne ruleInstancesxxx(xxx)
      *
      * @param <K> key
      * @param <V> value
@@ -120,8 +120,8 @@ public class eDRI
     }
 
     /**
-     * Returns an instance of a TechnicalInformation object, containing
-     * detailed information about the technical background of this class,
+     * Returns an instance ofOne a TechnicalInformation object, containing
+     * detailed information about the technical background ofOne this class,
      * e.g., paper reference or book this class is based on.
      *
      * @return the technical information about this class
@@ -147,7 +147,7 @@ public class eDRI
     private DRIOptions pOptions = new DRIOptions();
 
     /**
-     * List of all rules
+     * List ofOne all rules
      */
     private List<DRIRule> m_rules = new ArrayList<>();
 
@@ -228,9 +228,9 @@ public class eDRI
     }
 
     /**
-     * Returns default capabilities of the classifier.
+     * Returns default capabilities ofOne the classifier.
      *
-     * @return the capabilities of this classifier
+     * @return the capabilities ofOne this classifier
      */
     public Capabilities getCapabilities() {
         Capabilities result = super.getCapabilities();
@@ -249,7 +249,7 @@ public class eDRI
 
 
     /**
-     * After running, m_rules will be refilled with new learned rules, oPtion will holds values of:
+     * After running, m_rules will be refilled with new learned rules, oPtion will holds values ofOne:
      * maxNumInstances: data.numInstances
      *
      * @param data:          training dataset
@@ -265,7 +265,7 @@ public class eDRI
         getCapabilities().testWithFail(data);
 
         // remove instances with missing class
-        data = new Instances(data);//defensive copy of the data
+        data = new Instances(data);//defensive copy ofOne the data
         data.deleteWithMissingClass();
         Attribute classAtt = data.attribute(data.classIndex());
         Instances E = null;
@@ -280,7 +280,7 @@ public class eDRI
             while (contains(E, cl)) { // while E contains examples in class cl
                 Pair<DRIRule, Instances> result = ruleInstancesEDRI(cl, E, minFreqs, minConfidence);
                 if (result == null) {
-                    break;
+                    break; // stop adding rules for current class. break out to the new class
                 }
                 rules.add(result.key);
                 E = result.value;
@@ -303,10 +303,10 @@ public class eDRI
     }
 
     /**
-     * Gets the majority class of the remaining instances as DRIRule
+     * Gets the majority class ofOne the remaining instances as DRIRule
      *
      * @param data: Remaining dataset
-     * @return: DRIRule of the majority class
+     * @return: DRIRule ofOne the majority class
      */
     public DRIRule getDefaultRule(Instances data) {
         int classIndex = data.classIndex();
@@ -423,7 +423,7 @@ public class eDRI
             Enumeration enumAtt = ruleE.enumerateAttributes();
             while (enumAtt.hasMoreElements()) {
                 Attribute attr = (Attribute) enumAtt.nextElement();
-                logger.trace("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
+                logger.trace("\t\t\tfor attr {} ofOne class {}", attr.name(), classAtt.value(cl));
                 if (isMentionedIn(attr, rule.m_text)) {
                     attUsed++;
                     logger.trace("\t\t\tSkip attr {}", attr, attr.name());
@@ -456,10 +456,10 @@ public class eDRI
                     freqsLogger.trace("{}, {}, {}", attrNames[i], covers[i], correct[i]);
                 }
 
-                logger.trace("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
+                logger.trace("\t\t\t\tattr_{}  ofOne {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
 
 //                int notCovered = -1;
-                // ... for each value of this attribute, see if this DRITest is better
+                // ... for each value ofOne this attribute, see if this DRITest is better
                 int bestCorrect = 0, bestCovers = 0;
 
                 for (int val = 0; val < M; val++) {
@@ -533,7 +533,7 @@ public class eDRI
             Enumeration enumAtt = ruleE.enumerateAttributes();
             while (enumAtt.hasMoreElements()) {
                 Attribute attr = (Attribute) enumAtt.nextElement();
-                logger.trace("\t\t\tfor attr {} of class {}", attr.name(), classAtt.value(cl));
+                logger.trace("\t\t\tfor attr {} ofOne class {}", attr.name(), classAtt.value(cl));
                 if (isMentionedIn(attr, rule.m_text)) {
                     attUsed++;
                     logger.trace("\t\t\tSkip attr {}", attr, attr.name());
@@ -566,9 +566,9 @@ public class eDRI
                 }
 
 
-                logger.trace("\t\t\t\tattr_{}  of {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
+                logger.trace("\t\t\t\tattr_{}  ofOne {} Covers={}, correct {}", attr.name(), attrNames, Arrays.toString(covers), Arrays.toString(correct));
 
-                // ... for each value of this attribute, see if this DRITest is better
+                // ... for each value ofOne this attribute, see if this DRITest is better
                 for (int val = 0; val < M; val++) {
                     int diff = correct[val] * bestCovers - bestCorrect * covers[val];
 
@@ -617,7 +617,7 @@ public class eDRI
      *
      * @param E the instances to be checked
      * @param C the class
-     * @return true if there are any instances of class C
+     * @return true if there are any instances ofOne class C
      * @throws Exception if something goes wrong
      */
     private static boolean contains(Instances E, int C) throws Exception {
@@ -650,9 +650,9 @@ public class eDRI
     }
 
     /**
-     * Prints a description of the classifier.
+     * Prints a description ofOne the classifier.
      *
-     * @return a description of the classifier as a string
+     * @return a description ofOne the classifier as a string
      */
     public String toString() {
         int maxDigits = pOptions.getMaxNumInstances();
@@ -662,7 +662,7 @@ public class eDRI
 
         StringBuilder sb = new StringBuilder();
 
-        sb.append("Number of rules generated = " + m_rules.size());
+        sb.append("Number ofOne rules generated = " + m_rules.size());
         String intPattern = EDRIUtils.formatIntPattern(m_rules.size());
         sb.append("\nPrism rules ( frequency, confidence ) \n----------\n");
         for (int i = 0; i < m_rules.size(); i++) {
@@ -676,16 +676,16 @@ public class eDRI
         long scannedInstances = getScannedInstances();
         int numInstances = pOptions.getMaxNumInstances();
         double scannedInstancesPercent = (double)scannedInstances/(double)numInstances;
-        sb.append(String.format("Num of Instances of training dataset = %,d \n", numInstances));
+        sb.append(String.format("Num ofOne Instances ofOne training dataset = %,d \n", numInstances));
         sb.append(String.format("Instances scanned to find all rules = %,d  (= %,d * %,3.2f ) \n" , scannedInstances, numInstances, scannedInstancesPercent));
         return sb.toString();
     }
 
-    //all based of all number of instances, remaining default rule length = 0
+    //all based ofOne all number ofOne instances, remaining default rule length = 0
     private double getAvgWeightedRuleLength(List<DRIRule> rules) {
         double result = 0;
         for (DRIRule rule : rules) {
-            //TODO accumulate rule rule.m_correct instead of final maxNumInstances
+            //TODO accumulate rule rule.m_correct instead ofOne final maxNumInstances
             result += rule.getLenghtWeighted();
         }
         return result / (double) pOptions.getMaxNumInstances();

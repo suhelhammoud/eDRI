@@ -102,7 +102,7 @@ public class DRIOptions implements OptionHandler, Serializable{
         result.addElement(new Option("Add Default Rule?", "R", 0, "-R"));
         result.addElement(new Option("minimum support", "S", 1, "-S <lower bound for minimum support >"));
 //        result.addElement(new Option("minimum support", "s", 1, "-s <lower bound for minimum support >"));
-        result.addElement(new Option("minimum confidence", "C", 1, "-C <minimum confidence of a rule >"));
+        result.addElement(new Option("minimum confidence", "C", 1, "-C <minimum confidence ofOne a rule >"));
         result.addElement(new Option("descritption", "D", 1, "-D < off | trace | debug | info | warn | error | fatal >"));
         return result.elements();
 
