@@ -253,7 +253,7 @@ public class eDRI
      * maxNumInstances: data.numInstances
      *
      * @param data:          training dataset
-     * @param minFreqs:      minimum frequency threshold, (numInstances * minSupport)
+     * @param minFreqs:      minimum frequency threshold, (numInstances * minFrequency)
      * @param minConfidence: confidence threshold
      * @throws Exception
      */
@@ -344,9 +344,9 @@ public class eDRI
             double minSupport = pOptions.getMinSupport();
             double minConfidence = pOptions.getMinConfidence();
             int minFreq = (int) Math.ceil(minSupport * data.numInstances());
-            logger.info("Build classifier on {}, # Instances = {}, minSupport={} minFreq ={}, minConfidence={}",
+            logger.info("Build classifier on {}, # Instances = {}, minFrequency={} minFreq ={}, minRuleStrength={}",
                     data.relationName(), data.numInstances(), minSupport, minFreq, minConfidence);
-            freqsLogger.info("Build classifier on {}, # Instances = {}, minSupport={} minFreq ={}, minConfidence={}",
+            freqsLogger.info("Build classifier on {}, # Instances = {}, minFrequency={} minFreq ={}, minRuleStrength={}",
                     data.relationName(), data.numInstances(), minSupport, minFreq, minConfidence);
             buildClassifierEDRI(data, minFreq, minConfidence);
         }

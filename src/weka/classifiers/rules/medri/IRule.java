@@ -1,6 +1,9 @@
 package weka.classifiers.rules.medri;
 
 import com.google.common.base.MoreObjects;
+import weka.classifiers.rules.edri.EDRIUtils;
+import weka.core.Attribute;
+import weka.core.Instances;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -24,6 +27,7 @@ public class IRule implements Serializable{
     private int correct;
     private int errors;
     private int covers;
+
 
     public int getErrors() {
         return errors;
@@ -169,6 +173,28 @@ public class IRule implements Serializable{
                 .toString();
 
     }
+
+    public String toString(Instances data, int maxDigits) {
+
+        String pattern = "( "+ MedriUtils.formatIntPattern(maxDigits)+" , %.2f ) ";
+
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format(pattern, correct, getConfidence()));
+        sb.append("Label = " + data.classAttribute().value(label));
+        if (attIndexes.length > 0) {
+            sb.append(" when \t");
+            for (int i = 0; i < attIndexes.length; i++) {
+                Attribute att = data.attribute(attIndexes[i]);
+                String attValue = att.value(attValues[i]);
+                if( i == 0)
+                    sb.append(att.name() + " = " + attValue);
+                else
+                    sb.append(" , " + att.name() + " = " + attValue);
+            }
+        }
+        return sb.toString();
+    };
 
     public static void main(String[] args) {
         System.out.println("done");

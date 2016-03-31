@@ -13,7 +13,7 @@ public class Pair<K, V> {
     final public K key;
     final public V value;
 
-    Pair(K key, V value) {
+    public Pair(K key, V value) {
         this.key = key;
         this.value = value;
     }

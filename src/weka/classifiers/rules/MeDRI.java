@@ -3,10 +3,7 @@ package weka.classifiers.rules;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import weka.classifiers.Classifier;
-import weka.classifiers.rules.medri.IRule;
-import weka.classifiers.rules.medri.MedriOptions;
-import weka.classifiers.rules.medri.MedriUtils;
-import weka.classifiers.rules.medri.Pair;
+import weka.classifiers.rules.medri.*;
 import weka.core.*;
 
 import java.util.*;
@@ -114,33 +111,22 @@ public class MeDRI extends Classifier
     }
 
 
-    public double getMinSupport() {
-        return moptions.getMinSupport();
+    public double getMinFrequency() {
+        return moptions.getMinFrequency();
     }
 
-    public void setMinSupport(double support) {
-        moptions.setMinSupport(support);
+    public void setMinFrequency(double support) {
+        moptions.setMinFrequency(support);
     }
 
-    public double getMinConfidence() {
-        return moptions.getMinConfidence();
+    public double getMinRuleStrength() {
+        return moptions.getMinRuleStrength();
     }
 
-    public void setMinConfidence(double confidence) {
-        moptions.setMinConfidence(confidence);
+    public void setMinRuleStrength(double confidence) {
+        moptions.setMinRuleStrength(confidence);
     }
 
-//    public void setDebugLevel(SelectedTag newMethod) {
-//        moptions.setDebugLevel(newMethod);
-//    }
-//
-//    public SelectedTag getDebugLevel() {
-//        return moptions.getDebugLevel();
-//    }
-//
-//    public String debugLevelTipText() {
-//        return "debug level tip text";
-//    }
 
     public void setAlgorithm(SelectedTag newMethod) {
         moptions.setAlgorithm(newMethod);
@@ -186,16 +172,19 @@ public class MeDRI extends Classifier
 
         data.setClassIndex(data.numAttributes() - 1);
         moptions.setMaxNumInstances(data.numInstances());
+        moptions.setInstancesCopy(data);
+
+        moptions.resetScannedInstances(0);
 
         String algorithm = moptions.getAlgorithm().toString().toLowerCase();
         switch (algorithm) {
             case "prism":
-                buildClassifierPrism(data);
+                buildClassifierPrism(data, moptions.getAddDefaultRule());
                 break;
 
             case "edri": {
-                double minSupport = moptions.getMinSupport();
-                double minConfidence = moptions.getMinConfidence();
+                double minSupport = moptions.getMinFrequency();
+                double minConfidence = moptions.getMinRuleStrength();
                 int minFreq = (int) Math.ceil(minSupport * data.numInstances()+ 1.e-6);
                 logger.debug("minFreq used = {}", minFreq);
                 buildClassifierEDRI(data, minFreq, minConfidence, moptions.getAddDefaultRule());
@@ -203,13 +192,12 @@ public class MeDRI extends Classifier
             break;
 
             case "medri": {
-                double minSupport = moptions.getMinSupport();
-                double minConfidence = moptions.getMinConfidence();
+                double minSupport = moptions.getMinFrequency();
+                double minConfidence = moptions.getMinRuleStrength();
                 int minFreq = (int) Math.ceil(minSupport * data.numInstances() + 1.e-6);
                 logger.debug("minFreq used = {}", minFreq);
                 buildClassifierMeDRI(data, minFreq, minConfidence, moptions.getAddDefaultRule());
 
-                System.out.println("run medri algorithm");
             }
             break;
 
@@ -220,7 +208,9 @@ public class MeDRI extends Classifier
 
     }
 
-    public void buildClassifierMeDRI(Instances data, int minSupport, double minConfidence, boolean addDefaultRule) {
+
+
+    public MeDRIResult buildClassifierMeDRI(Instances data, int minSupport, double minConfidence, boolean addDefaultRule) {
         int[] iattrs = MedriUtils.mapAttributes(data);
 
         Pair<Collection<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
@@ -228,16 +218,16 @@ public class MeDRI extends Classifier
         int[] labelsCount = linesLabels.value;
 
         logger.trace("original lines size ={}", lineData.size());
-        List<IRule> rules = MedriUtils.buildClassifierMeDRI(iattrs, labelsCount,
+       MeDRIResult result = MedriUtils.buildClassifierMeDRI(iattrs, labelsCount,
                 lineData, minSupport, minConfidence, addDefaultRule);
 
-//        logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));
-
         m_rules.clear();
-        m_rules.addAll(rules);
+        m_rules.addAll(result.getRules());
+        moptions.resetScannedInstances(result.getScannedInstances());
+        return result;
     }
 
-    public void buildClassifierEDRI(Instances data, int minSupport, double minConfidence, boolean addDefaultRule) {
+    public MeDRIResult buildClassifierEDRI(Instances data, int minSupport, double minConfidence, boolean addDefaultRule) {
         int[] iattrs = MedriUtils.mapAttributes(data);
 
         Pair<Collection<int[]>, int[]> linesLabels = MedriUtils.mapIdataAndLabels(data);
@@ -245,17 +235,17 @@ public class MeDRI extends Classifier
         int[] labelsCount = linesLabels.value;
 
         logger.trace("original lines size ={}", lineData.size());
-        List<IRule> rules = MedriUtils.buildClassifierEDRI(iattrs, labelsCount,
+        MeDRIResult result = MedriUtils.buildClassifierEDRI(iattrs, labelsCount,
                 lineData, minSupport, minConfidence, addDefaultRule);
 
-//        logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));
-
         m_rules.clear();
-        m_rules.addAll(rules);
+        m_rules.addAll(result.getRules());
+        moptions.resetScannedInstances(result.getScannedInstances());
+        return result;
     }
 
 
-    public void buildClassifierPrism(Instances data) {
+    public MeDRIResult buildClassifierPrism(Instances data, boolean addDefaultRule) {
 
         int[] iattrs = MedriUtils.mapAttributes(data);
 
@@ -264,14 +254,85 @@ public class MeDRI extends Classifier
         int[] labelsCount = linesLabels.value;
 
         logger.trace("original lines size ={}", lineData.size());
-        List<IRule> rules = MedriUtils.buildClassifierPrism(iattrs, labelsCount, lineData);
-
-//        logger.info("rules generated =\n{}", Joiner.on("\n").join(rules));
+        MeDRIResult result = MedriUtils.buildClassifierPrism(iattrs, labelsCount, lineData, addDefaultRule);
 
         m_rules.clear();
-        m_rules.addAll(rules);
-
+        m_rules.addAll(result.getRules());
+        moptions.resetScannedInstances(result.getScannedInstances());
+        return result;
     }
+
+    public String toString(Instances data, int maxDigit) {
+        if (m_rules == null) {
+            return getAlgorithm() + "No model built yet.";
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(String.format("Classifier = %s , add default rule = %s", getAlgorithm().toString(), String.valueOf(getAddDefaultRule())));
+        if (!getAlgorithm().toString().toUpperCase().equals("PRISM")) {
+            sb.append(String.format(" min freq = %.4f, min strength = %.2f", getMinFrequency(), getMinRuleStrength()));
+        }
+        sb.append("\nNumber of rules generated = " + m_rules.size());
+        String intPattern = MedriUtils.formatIntPattern(m_rules.size());
+        sb.append("\n" + getAlgorithm() +" rules ( frequency, strength ) \n----------\n");
+        for (int i = 0; i < m_rules.size(); i++) {
+            IRule rule = m_rules.get(i);
+            sb.append(String.format(intPattern + " - ", (i + 1)) + rule.toString(data, maxDigit) + "\n");
+        }
+
+        sb.append(String.format("\nClassifier = %s , add default rule = %s", getAlgorithm().toString(), String.valueOf(getAddDefaultRule())));
+        if (!getAlgorithm().toString().toUpperCase().equals("PRISM")) {
+            sb.append(String.format(" min freq = %.4f, min strenght = %.2f\n ", getMinFrequency(), getMinRuleStrength()));
+        } else sb.append("\n");
+
+        sb.append(String.format("Avg. Weighted Rule Length = %2.2f", getAvgWeightedRuleLength(m_rules)) + "\n");
+        sb.append(String.format("Avg. Rule Length = %2.2f", getAvgRuleLength(m_rules)) + "\n");
+
+        int numInstances = moptions.getMaxNumInstances();
+        sb.append(String.format("Num of Instances of training dataset = %,d \n", numInstances));
+        Pair<Integer, Integer> pnp = getInstancesOfPerfectRules(m_rules);
+        sb.append(String.format("# Instances covered with perfect rules = %,d instances  ( %.2f %% )  \n", (int)pnp.key, (double)pnp.key/pnp.value));
+
+        Pair<Integer, Integer> pnprules = perfectRules(m_rules);
+        sb.append(String.format("# perfect rules = %,d , # not perfect rules = %,d \n", pnprules.key, pnprules.value));
+
+        long scannedInstances = moptions.getScannedInstances();
+        double scannedInstancesPercent = (double)scannedInstances/(double)numInstances;
+
+
+        sb.append(String.format("Instances scanned to find all rules = %,d  (= %,d * %,3.2f ) \n" , scannedInstances, numInstances, scannedInstancesPercent));
+        return sb.toString();
+    }
+
+    private static Pair<Integer, Integer> perfectRules(List<IRule> rules) {
+        int perfectRules = 0;
+        int notPerfectRules = 0;
+
+        for (IRule rule : rules) {
+            if (1 - rule.getConfidence() < 1e-6) {
+                perfectRules++;
+            }else notPerfectRules ++;
+        }
+        return new Pair(perfectRules, notPerfectRules);
+    }
+
+    private static Pair<Integer, Integer> getInstancesOfPerfectRules(List<IRule> rules) {
+        int perfectRules = 0;
+        int totals = 0;
+
+        for (IRule rule : rules) {
+            int correct = rule.getCorrect();
+            totals += correct;
+            if (1 - rule.getConfidence() < 1e-6) {
+                perfectRules+=  correct;
+            }
+        }
+//        perfectRules = perfectRules/totals;
+//        notPerfectRules = notPerfectRules/totals;
+        return new Pair(perfectRules, totals );
+    }
+
 
     /**
      * Prints a description of the classifier.
@@ -280,29 +341,8 @@ public class MeDRI extends Classifier
      */
     public String toString() {
         int maxDigits = moptions.getMaxNumInstances();
-        if (m_rules == null) {
-            return "Prism: No model built yet.";
-        }
-
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("Number of rules generated = " + m_rules.size());
-        String intPattern = MedriUtils.formatIntPattern(m_rules.size());
-        sb.append("\nPrism rules ( frequency, confidence ) \n----------\n");
-        for (int i = 0; i < m_rules.size(); i++) {
-            IRule rule = m_rules.get(i);
-            sb.append(String.format(intPattern + " - ", (i + 1)) + rule + "\n");
-        }
-
-        sb.append(String.format("Avg. Weighted Rule Length = %2.2f", getAvgWeightedRuleLength(m_rules)) + "\n");
-        sb.append(String.format("Avg. Rule Length = %2.2f", getAvgRuleLength(m_rules)) + "\n");
-
-//        long scannedInstances = getScannedInstances();
-        int numInstances = moptions.getMaxNumInstances();
-//        double scannedInstancesPercent = (double)scannedInstances/(double)numInstances;
-        sb.append(String.format("Num of Instances of training dataset = %,d \n", numInstances));
-//        sb.append(String.format("Instances scanned to find all rules = %,d  (= %,d * %,3.2f ) \n" , scannedInstances, numInstances, scannedInstancesPercent));
-        return sb.toString();
+        Instances data = moptions.getInstances();
+        return toString(data, maxDigits);
     }
 
     //all based of all number of instances, remaining default rule length = 0

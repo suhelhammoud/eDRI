@@ -241,7 +241,7 @@ public class DRIRule
         if (m_errors == 0) return true;
         if (m_correct >= minSupport) return true;
         if (getConfidence() >= minConf && m_correct >= minSupport) return true;
-//        if(m_correct >= minSupport) return  true;
+//        if(m_correct >= minFrequency) return  true;
         return false;
     }
 

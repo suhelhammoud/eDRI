@@ -9,9 +9,16 @@ import java.util.Set;
 public class IRuleLines {
     final public IRule rule;
     final public Collection<int[]> lines;
+    final public long scannedInstances;
 
-    IRuleLines(IRule rule, Collection<int[]> lines) {
+    public IRuleLines(IRule rule, Collection<int[]> lines, long scannedInstances) {
         this.rule = rule;
         this.lines = lines;
+        this.scannedInstances = scannedInstances;
+    }
+
+    public IRuleLines(IRule rule, Collection<int[]> lines) {
+        this(rule, lines, 0);
+
     }
 }
